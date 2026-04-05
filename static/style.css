@@ -159,3 +159,106 @@ footer {
 }
 
 #status-text { margin: 0; color: #0f3460; }
+
+.notice {
+    margin: 0.6rem 0 0;
+    font-size: 0.75rem;
+    opacity: 0.6;
+}
+
+.diary-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+}
+#result-date {
+    font-weight: 700;
+    color: #0f3460;
+    font-size: 0.95rem;
+}
+
+.toolbar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.toolbar button {
+    margin-top: 0;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    background: #fff;
+    color: #0f3460;
+    border: 1px solid #0f3460;
+}
+.toolbar button:hover:not(:disabled) { background: #0f3460; color: #fff; }
+.toolbar button.danger { color: #c0392b; border-color: #c0392b; background: #fff; }
+.toolbar button.danger:hover:not(:disabled) { background: #c0392b; color: #fff; }
+
+button.mini {
+    margin: 0;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    background: #fff;
+    color: #666;
+    border: 1px solid #ccc;
+}
+button.mini.danger { color: #c0392b; border-color: #c0392b; }
+button.mini.danger:hover { background: #c0392b; color: #fff; }
+
+#save-btn {
+    margin: 0;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+.history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.history-list .empty {
+    color: #999;
+    font-size: 0.85rem;
+    padding: 0.5rem 0;
+}
+.history-item {
+    border-bottom: 1px solid #eee;
+    padding: 0.8rem 0;
+}
+.history-item:last-child { border-bottom: none; }
+.history-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+.history-date {
+    font-weight: 700;
+    color: #0f3460;
+    min-width: 90px;
+}
+.history-emotion {
+    font-size: 0.75rem;
+    color: #888;
+    flex: 1;
+}
+.history-item details {
+    margin-top: 0.5rem;
+}
+.history-item summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #0f3460;
+}
+.history-user, .history-ai {
+    font-size: 0.85rem;
+    margin: 0.4rem 0;
+    white-space: pre-wrap;
+    padding: 0.5rem;
+    background: #f7f5f0;
+    border-radius: 4px;
+}
+.history-user { border-left: 3px solid #999; }
+.history-ai { border-left: 3px solid #0f3460; }

@@ -10,6 +10,7 @@
     <header>
         <h1>Superposition</h1>
         <p class="subtitle">量子カフェマスター・カイが、あなたの日記を読んで書き記す</p>
+        <p class="notice">※ あなたの日記データはこのブラウザ内にのみ保存されます（サーバには残りません）</p>
     </header>
 
     <main>
@@ -35,6 +36,10 @@
 
         <section class="card" id="result" hidden>
             <h2>2. カイの日記</h2>
+            <div class="diary-meta">
+                <span id="result-date"></span>
+                <button type="button" id="save-btn">ブラウザに保存</button>
+            </div>
             <article id="ai-diary" class="diary-text"></article>
 
             <h3>感情パラメータ</h3>
@@ -44,6 +49,19 @@
                 <summary>影響度（デバッグ）</summary>
                 <pre id="debug-json"></pre>
             </details>
+        </section>
+
+        <section class="card">
+            <h2>保存された日記</h2>
+            <div class="toolbar">
+                <button type="button" id="export-btn">エクスポート (JSON)</button>
+                <button type="button" id="import-btn">インポート</button>
+                <button type="button" id="clear-btn" class="danger">全削除</button>
+                <input type="file" id="import-file" accept="application/json" hidden>
+            </div>
+            <ul id="history-list" class="history-list">
+                <li class="empty">まだ保存された日記はありません。</li>
+            </ul>
         </section>
     </main>
 

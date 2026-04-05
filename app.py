@@ -1,4 +1,4 @@
-"""Flask web app for Quantum Diary Agent."""
+"""Flask web app for Quantum Diary Agent (stateless — client-side storage)."""
 from __future__ import annotations
 
 import os
@@ -7,9 +7,9 @@ from datetime import date
 
 from flask import Flask, jsonify, render_template, request
 
-from core import sentiment, storage
+from core import sentiment
 from core.diary_writer import write_diary
-from core.quantum_emotion import QuantumEmotionState
+from core.quantum_emotion import AXES, QuantumEmotionState
 
 MAX_INPUT_CHARS = 4000
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -40,11 +40,31 @@ def index():
     return render_template("index.html", today=today)
 
 
+def _parse_previous_state(raw) -> QuantumEmotionState:
+    """Validate and build a QuantumEmotionState from client-sent state vector."""
+    if not isinstance(raw, dict):
+        return QuantumEmotionState()
+    clean: dict[str, list[float]] = {}
+    for axis in AXES:
+        v = raw.get(axis)
+        if (
+            isinstance(v, list)
+            and len(v) == 2
+            and all(isinstance(x, (int, float)) for x in v)
+        ):
+            clean[axis] = [float(v[0]), float(v[1])]
+        else:
+            return QuantumEmotionState()
+    return QuantumEmotionState(clean)
+
+
 @app.post("/api/generate")
 def api_generate():
     payload = request.get_json(silent=True) or {}
     entry_date = str(payload.get("date", "")).strip()
     user_text = str(payload.get("diary", "")).strip()
+    previous_state = payload.get("previous_state")
+    previous_summary = str(payload.get("previous_summary", "")).strip()[:600] or None
 
     # --- Input validation ---
     if not DATE_RE.match(entry_date):
@@ -58,18 +78,8 @@ def api_generate():
     if len(user_text) > MAX_INPUT_CHARS:
         return jsonify({"error": f"本文は{MAX_INPUT_CHARS}文字以内にしてください"}), 400
 
-    # --- Load previous state for continuity ---
-    previous = storage.get_latest_before(entry_date)
-    if previous and previous.get("state_vec"):
-        emotion = QuantumEmotionState(previous["state_vec"])
-        prev_summary = (
-            f"前回（{previous['entry_date']}）の常連客の日記: "
-            f"{previous['user_diary'][:200]}"
-        )
-    else:
-        emotion = QuantumEmotionState()
-        prev_summary = None
-
+    # --- Restore or initialize emotion state ---
+    emotion = _parse_previous_state(previous_state)
     probs_before = emotion.probabilities()
 
     # --- Sentiment analysis on user text ---
@@ -80,16 +90,7 @@ def api_generate():
     probs_after = emotion.probabilities()
 
     # --- Generate AI diary ---
-    ai_diary = write_diary(entry_date, user_text, emotion, prev_summary)
-
-    # --- Persist ---
-    storage.save_entry(
-        entry_date=entry_date,
-        user_diary=user_text,
-        ai_diary=ai_diary,
-        emotion=probs_after,
-        state_vec=emotion.to_dict(),
-    )
+    ai_diary = write_diary(entry_date, user_text, emotion, previous_summary)
 
     return jsonify(
         {
@@ -98,32 +99,12 @@ def api_generate():
             "impacts": impacts,
             "emotion_before": probs_before,
             "emotion_after": probs_after,
+            "state_vec": emotion.to_dict(),
         }
     )
 
 
-@app.get("/api/entry")
-def api_get_entry():
-    entry_date = request.args.get("date", "").strip()
-    if not DATE_RE.match(entry_date):
-        return jsonify({"error": "日付形式が不正です"}), 400
-    entry = storage.get_entry(entry_date)
-    if entry is None:
-        return jsonify({"entry": None})
-    entry.pop("state_vec", None)
-    return jsonify({"entry": entry})
-
-
-@app.get("/api/history")
-def api_history():
-    entries = storage.list_entries(limit=30)
-    for e in entries:
-        e.pop("state_vec", None)
-    return jsonify({"entries": entries})
-
-
 if __name__ == "__main__":
-    storage.init_db()
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "5000"))
     debug = os.environ.get("FLASK_DEBUG", "0") == "1"
