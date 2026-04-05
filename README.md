@@ -20,9 +20,18 @@
 pip install -r requirements.txt
 
 # 初回はモデルDLに時間がかかります
-export GEMMA_MODEL_ID="google/gemma-3-4b-it"  # 変更可
+export GEMMA_MODEL_ID="google/gemma-4-E4B-it"  # 変更可
 python app.py
 ```
+
+### 利用可能な Gemma 4 モデル（2026年4月リリース）
+
+| モデルID | サイズ | 用途 |
+|---------|-------|------|
+| `google/gemma-4-E2B-it` | 5B | 軽量・オンデバイス |
+| `google/gemma-4-E4B-it` | 8B | **デフォルト（推奨）** |
+| `google/gemma-4-26B-A4B-it` | 26B MoE (4B active) | 高品質 |
+| `google/gemma-4-31B-it` | 31B Dense | 最高品質・要GPU |
 
 ブラウザで http://127.0.0.1:5000 を開く。
 
@@ -30,7 +39,7 @@ python app.py
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
-| `GEMMA_MODEL_ID` | `google/gemma-3-4b-it` | HF のモデルID |
+| `GEMMA_MODEL_ID` | `google/gemma-4-E4B-it` | HF のモデルID |
 | `HOST` | `127.0.0.1` | バインドホスト |
 | `PORT` | `5000` | ポート |
 | `FLASK_DEBUG` | `0` | `1` でデバッグモード |

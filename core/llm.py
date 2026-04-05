@@ -7,7 +7,7 @@ import threading
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-DEFAULT_MODEL_ID = os.environ.get("GEMMA_MODEL_ID", "google/gemma-3-4b-it")
+DEFAULT_MODEL_ID = os.environ.get("GEMMA_MODEL_ID", "google/gemma-4-E4B-it")
 
 _lock = threading.Lock()
 _tokenizer = None
