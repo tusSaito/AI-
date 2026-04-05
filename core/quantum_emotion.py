@@ -1,4 +1,3 @@
-"""Quantum emotion state model — pure NumPy state-vector simulation."""
 from __future__ import annotations
 
 import numpy as np
@@ -11,7 +10,7 @@ AXIS_LABELS = {
     "calm": ("冷静", "焦燥"),
 }
 
-MAX_ROTATION = np.pi / 6  # 回転角の上限（急変防止）
+MAX_ROTATION = np.pi / 6
 
 
 class QuantumEmotionState:
@@ -31,7 +30,6 @@ class QuantumEmotionState:
         return np.array([[c, -s], [s, c]])
 
     def update(self, impacts: dict[str, float]) -> None:
-        """Apply Ry rotation per axis based on impact values in [-1, 1]."""
         for axis, impact in impacts.items():
             if axis not in self.states:
                 continue
@@ -52,7 +50,6 @@ class QuantumEmotionState:
         return {axis: self.states[axis].tolist() for axis in AXES}
 
     def describe(self) -> str:
-        """Human-readable emotion summary for prompt injection."""
         probs = self.probabilities()
         lines = ["## 現在の感情状態"]
         for axis, p in probs.items():

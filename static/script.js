@@ -14,7 +14,6 @@
     };
     const AXES = ["confidence", "curiosity", "calm"];
 
-    // --- DOM ---
     const form = document.getElementById("diary-form");
     const dateInput = document.getElementById("entry-date");
     const textarea = document.getElementById("entry-text");
@@ -36,7 +35,6 @@
 
     let currentResult = null;
 
-    // --- localStorage helpers ---
     function loadAll() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -59,12 +57,10 @@
         return all[dates[dates.length - 1]];
     }
 
-    // --- Character count ---
     textarea.addEventListener("input", function () {
         charCount.textContent = String(textarea.value.length);
     });
 
-    // --- Submit: call API ---
     form.addEventListener("submit", async function (e) {
         e.preventDefault();
         const date = dateInput.value;
@@ -83,7 +79,7 @@
 
         submitBtn.disabled = true;
         statusCard.hidden = false;
-        statusText.textContent = "カイが読んでいます…（初回はモデル読み込みで数分かかります）";
+        statusText.textContent = "生成中（初回はモデル読み込みで数分かかります）";
         resultCard.hidden = true;
 
         try {
@@ -115,7 +111,6 @@
         submitBtn.disabled = false;
     });
 
-    // --- Save current result to localStorage ---
     saveBtn.addEventListener("click", function () {
         if (!currentResult) return;
         const all = loadAll();
@@ -126,12 +121,11 @@
         }
         all[currentResult.date] = currentResult;
         saveAll(all);
-        saveBtn.textContent = "保存しました ✓";
+        saveBtn.textContent = "保存しました";
         saveBtn.disabled = true;
         renderHistory();
     });
 
-    // --- Render result ---
     function renderResult(data) {
         resultDate.textContent = data.date;
         aiDiaryEl.textContent = data.ai_diary || "";
@@ -183,7 +177,6 @@
         resultCard.scrollIntoView({ behavior: "smooth" });
     }
 
-    // --- History list ---
     function renderHistory() {
         const all = loadAll();
         const dates = Object.keys(all).sort().reverse();
@@ -234,11 +227,19 @@
 
             const userP = document.createElement("p");
             userP.className = "history-user";
-            userP.textContent = "📝 " + entry.user_diary;
+            const userLabel = document.createElement("span");
+            userLabel.className = "entry-label";
+            userLabel.textContent = "自分: ";
+            userP.appendChild(userLabel);
+            userP.appendChild(document.createTextNode(entry.user_diary));
 
             const aiP = document.createElement("p");
             aiP.className = "history-ai";
-            aiP.textContent = "☕ " + entry.ai_diary;
+            const aiLabel = document.createElement("span");
+            aiLabel.className = "entry-label";
+            aiLabel.textContent = "カイ: ";
+            aiP.appendChild(aiLabel);
+            aiP.appendChild(document.createTextNode(entry.ai_diary));
 
             const details = document.createElement("details");
             const summary = document.createElement("summary");
@@ -253,7 +254,6 @@
         });
     }
 
-    // --- Export / Import ---
     exportBtn.addEventListener("click", function () {
         const data = loadAll();
         const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -310,6 +310,5 @@
         renderHistory();
     });
 
-    // --- Init ---
     renderHistory();
 })();

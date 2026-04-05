@@ -1,4 +1,3 @@
-"""LLM loader and generation helper for Gemma 4 via HuggingFace Transformers."""
 from __future__ import annotations
 
 import os
@@ -15,7 +14,6 @@ _model = None
 
 
 def load_model() -> tuple:
-    """Lazy-load Gemma 4 model & processor (singleton)."""
     global _processor, _model
     with _lock:
         if _model is None:
@@ -38,7 +36,6 @@ def generate(
     max_new_tokens: int = 512,
     temperature: float = 1.0,
 ) -> str:
-    """Run a single-turn chat completion and return the assistant text."""
     max_new_tokens = max(16, min(int(max_new_tokens), 2048))
     temperature = max(0.0, min(float(temperature), 2.0))
 

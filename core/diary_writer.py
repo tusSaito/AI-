@@ -1,4 +1,3 @@
-"""AI character diary generation based on user's diary + quantum emotion."""
 from __future__ import annotations
 
 from .llm import generate
@@ -8,12 +7,12 @@ from .quantum_emotion import QuantumEmotionState
 
 def _style_hint(conf: float) -> str:
     if conf >= 0.7:
-        return "力強い断定。「〜であると確信している」「迷いはない」"
+        return "力強い断定。〜であると確信している／迷いはない"
     if conf >= 0.5:
-        return "バランスの取れた自省。「〜だと考える」「〜であろう」"
+        return "バランスの取れた自省。〜だと考える／〜であろう"
     if conf >= 0.3:
-        return "問いかけが増える。「本当にこれでいいのだろうか」"
-    return "深い内省・自己対話。「私は何を恐れているのだ」"
+        return "問いかけが増える。本当にこれでいいのだろうか"
+    return "深い内省・自己対話。私は何を恐れているのだ"
 
 
 def write_diary(
@@ -22,7 +21,6 @@ def write_diary(
     emotion: QuantumEmotionState,
     previous_summary: str | None = None,
 ) -> str:
-    """Generate Kai's diary entry reflecting on the user's diary."""
     safe_text = user_text.strip()[:4000]
     probs = emotion.probabilities()
     style = _style_hint(probs["confidence"])
@@ -38,7 +36,7 @@ def write_diary(
 → 文体: {style}
 {memory_block}
 ## 今日、常連客が書き残した日記
-「{safe_text}」
+{safe_text}
 
 ## 条件
 - 約400文字

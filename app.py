@@ -1,4 +1,3 @@
-"""Flask web app for Quantum Diary Agent (stateless — client-side storage)."""
 from __future__ import annotations
 
 import os
@@ -15,7 +14,7 @@ MAX_INPUT_CHARS = 4000
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 64 * 1024  # 64KB request cap
+app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
 
 
 @app.after_request
@@ -41,7 +40,6 @@ def index():
 
 
 def _parse_previous_state(raw) -> QuantumEmotionState:
-    """Validate and build a QuantumEmotionState from client-sent state vector."""
     if not isinstance(raw, dict):
         return QuantumEmotionState()
     clean: dict[str, list[float]] = {}
@@ -66,7 +64,6 @@ def api_generate():
     previous_state = payload.get("previous_state")
     previous_summary = str(payload.get("previous_summary", "")).strip()[:600] or None
 
-    # --- Input validation ---
     if not DATE_RE.match(entry_date):
         return jsonify({"error": "日付形式が不正です (YYYY-MM-DD)"}), 400
     try:
@@ -78,18 +75,13 @@ def api_generate():
     if len(user_text) > MAX_INPUT_CHARS:
         return jsonify({"error": f"本文は{MAX_INPUT_CHARS}文字以内にしてください"}), 400
 
-    # --- Restore or initialize emotion state ---
     emotion = _parse_previous_state(previous_state)
     probs_before = emotion.probabilities()
 
-    # --- Sentiment analysis on user text ---
     impacts = sentiment.analyze(user_text)
-
-    # --- Quantum state update ---
     emotion.update(impacts)
     probs_after = emotion.probabilities()
 
-    # --- Generate AI diary ---
     ai_diary = write_diary(entry_date, user_text, emotion, previous_summary)
 
     return jsonify(

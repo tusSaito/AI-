@@ -262,3 +262,4 @@ button.mini.danger:hover { background: #c0392b; color: #fff; }
 }
 .history-user { border-left: 3px solid #999; }
 .history-ai { border-left: 3px solid #0f3460; }
+.entry-label { font-weight: 700; color: #555; margin-right: 0.3rem; }
