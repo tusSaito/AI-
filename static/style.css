@@ -1,0 +1,161 @@
+* { box-sizing: border-box; }
+
+body {
+    font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: #faf9f6;
+    color: #2c2c2c;
+    margin: 0;
+    line-height: 1.7;
+}
+
+header {
+    background: linear-gradient(135deg, #1a1a2e, #0f3460);
+    color: #fff;
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2rem;
+    letter-spacing: 4px;
+}
+
+.subtitle {
+    margin: 0.4rem 0 0;
+    opacity: 0.75;
+    font-size: 0.9rem;
+}
+
+main {
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-left: 4px solid #0f3460;
+}
+
+.card h2 {
+    margin-top: 0;
+    color: #0f3460;
+    font-size: 1.1rem;
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #555;
+    margin-top: 0.8rem;
+    margin-bottom: 0.3rem;
+}
+
+input[type="date"], textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+textarea { resize: vertical; }
+
+.count {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: 0.3rem;
+}
+
+button {
+    margin-top: 1rem;
+    background: #0f3460;
+    color: #fff;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button:hover:not(:disabled) { background: #16213e; }
+button:disabled { background: #999; cursor: not-allowed; }
+
+.diary-text {
+    background: #f7f5f0;
+    padding: 1.2rem;
+    border-radius: 6px;
+    white-space: pre-wrap;
+    font-family: "Hiragino Mincho ProN", "Noto Serif JP", serif;
+    line-height: 2;
+}
+
+#emotion-bars { margin-top: 1rem; }
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.bar-label { width: 80px; font-weight: 700; color: #555; }
+.bar-track {
+    flex: 1;
+    height: 12px;
+    background: #f0f0ec;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s ease;
+}
+.bar-value {
+    width: 50px;
+    text-align: right;
+    color: #888;
+    font-size: 0.85rem;
+}
+.bar-delta {
+    width: 60px;
+    text-align: right;
+    font-size: 0.75rem;
+    color: #aaa;
+}
+.bar-delta.up { color: #2a9d5f; }
+.bar-delta.down { color: #c0392b; }
+
+details {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #666;
+}
+details pre {
+    background: #f0f0ec;
+    padding: 0.6rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+footer {
+    text-align: center;
+    padding: 1.5rem;
+    background: #f0f0ec;
+    color: #999;
+    font-size: 0.8rem;
+}
+
+#status-text { margin: 0; color: #0f3460; }

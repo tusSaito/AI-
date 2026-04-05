@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superposition — 量子日記エージェント</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Superposition</h1>
+        <p class="subtitle">量子カフェマスター・カイが、あなたの日記を読んで書き記す</p>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>1. 今日の日記を書く</h2>
+            <form id="diary-form" autocomplete="off">
+                <label for="entry-date">日付</label>
+                <input type="date" id="entry-date" name="date" value="{{ today }}" required>
+
+                <label for="entry-text">本文（最大4000文字）</label>
+                <textarea id="entry-text" name="diary" rows="10" maxlength="4000"
+                          placeholder="今日あったこと、感じたことを自由に書いてください。"
+                          required></textarea>
+                <div class="count"><span id="char-count">0</span> / 4000</div>
+
+                <button type="submit" id="submit-btn">カイに読んでもらう</button>
+            </form>
+        </section>
+
+        <section class="card" id="status" hidden>
+            <p id="status-text">生成中…</p>
+        </section>
+
+        <section class="card" id="result" hidden>
+            <h2>2. カイの日記</h2>
+            <article id="ai-diary" class="diary-text"></article>
+
+            <h3>感情パラメータ</h3>
+            <div id="emotion-bars"></div>
+
+            <details>
+                <summary>影響度（デバッグ）</summary>
+                <pre id="debug-json"></pre>
+            </details>
+        </section>
+    </main>
+
+    <footer>
+        <small>Quantum Emotion Agent Diary — Local Gemma + NumPy Quantum Simulation</small>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
