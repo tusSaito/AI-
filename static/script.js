@@ -1,165 +1,167 @@
 (function () {
     "use strict";
 
-    const STORAGE_KEY = "quantum_diary_entries_v1";
-    const EMOTION_LABELS = {
-        confidence: "自信",
-        curiosity: "好奇心",
-        calm: "冷静",
-    };
-    const EMOTION_COLORS = {
-        confidence: "#4A90D9",
-        curiosity: "#50C878",
-        calm: "#FF8C42",
-    };
-    const AXES = ["confidence", "curiosity", "calm"];
+    var STORAGE_KEY = "quantum_diary_entries_v1";
+    var SUMMARIES_KEY = "quantum_diary_weekly_v1";
+    var EMOTION_LABELS = { confidence: "自信", curiosity: "好奇心", calm: "冷静" };
+    var EMOTION_COLORS = { confidence: "#4A90D9", curiosity: "#50C878", calm: "#FF8C42" };
+    var AXES = ["confidence", "curiosity", "calm"];
 
-    const form = document.getElementById("diary-form");
-    const dateInput = document.getElementById("entry-date");
-    const textarea = document.getElementById("entry-text");
-    const charCount = document.getElementById("char-count");
-    const submitBtn = document.getElementById("submit-btn");
-    const statusCard = document.getElementById("status");
-    const statusText = document.getElementById("status-text");
-    const resultCard = document.getElementById("result");
-    const resultDate = document.getElementById("result-date");
-    const saveBtn = document.getElementById("save-btn");
-    const aiDiaryEl = document.getElementById("ai-diary");
-    const barsEl = document.getElementById("emotion-bars");
-    const debugEl = document.getElementById("debug-json");
-    const historyList = document.getElementById("history-list");
-    const exportBtn = document.getElementById("export-btn");
-    const importBtn = document.getElementById("import-btn");
-    const importFile = document.getElementById("import-file");
-    const clearBtn = document.getElementById("clear-btn");
+    var chat = document.getElementById("chat");
+    var dateInput = document.getElementById("entry-date");
+    var textarea = document.getElementById("entry-text");
+    var charCount = document.getElementById("char-count");
+    var submitBtn = document.getElementById("submit-btn");
+    var emotionPanel = document.getElementById("emotion-panel");
+    var barsEl = document.getElementById("emotion-bars");
+    var historyList = document.getElementById("history-list");
+    var exportBtn = document.getElementById("export-btn");
+    var importBtn = document.getElementById("import-btn");
+    var importFile = document.getElementById("import-file");
+    var clearBtn = document.getElementById("clear-btn");
 
-    let currentResult = null;
+    function loadEntries() {
+        try { var r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : {}; }
+        catch (e) { return {}; }
+    }
+    function saveEntries(o) { localStorage.setItem(STORAGE_KEY, JSON.stringify(o)); }
 
-    function loadAll() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return {};
-            const parsed = JSON.parse(raw);
-            return (parsed && typeof parsed === "object") ? parsed : {};
-        } catch (e) {
-            return {};
+    function loadSummaries() {
+        try { var r = localStorage.getItem(SUMMARIES_KEY); return r ? JSON.parse(r) : {}; }
+        catch (e) { return {}; }
+    }
+    function saveSummaries(o) { localStorage.setItem(SUMMARIES_KEY, JSON.stringify(o)); }
+
+    function getWeekKey(dateStr) {
+        var d = new Date(dateStr);
+        var jan1 = new Date(d.getFullYear(), 0, 1);
+        var days = Math.floor((d - jan1) / 86400000);
+        var week = Math.ceil((days + jan1.getDay() + 1) / 7);
+        return d.getFullYear() + "-W" + String(week).padStart(2, "0");
+    }
+
+    function getRecentDays(dateStr, max) {
+        var all = loadEntries();
+        var dates = Object.keys(all).filter(function (d) { return d < dateStr; }).sort().reverse();
+        var result = [];
+        for (var i = 0; i < Math.min(dates.length, max || 3); i++) {
+            result.push(all[dates[i]]);
         }
+        return result.reverse();
     }
 
-    function saveAll(entries) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    function getPreviousWeekSummary(dateStr) {
+        var currentWeek = getWeekKey(dateStr);
+        var sums = loadSummaries();
+        var keys = Object.keys(sums).filter(function (k) { return k < currentWeek; }).sort().reverse();
+        return keys.length > 0 ? sums[keys[0]] : null;
     }
 
-    function getLatestBefore(dateStr) {
-        const all = loadAll();
-        const dates = Object.keys(all).filter(function (d) { return d < dateStr; }).sort();
-        if (dates.length === 0) return null;
-        return all[dates[dates.length - 1]];
+    function getPreviousState(dateStr) {
+        var recent = getRecentDays(dateStr, 1);
+        return recent.length > 0 ? recent[0].state_vec : null;
+    }
+
+    function addBubble(type, text, dateStr) {
+        var div = document.createElement("div");
+        div.className = "bubble " + type;
+        if (dateStr) {
+            var tag = document.createElement("span");
+            tag.className = "date-tag";
+            tag.textContent = dateStr;
+            div.appendChild(tag);
+        }
+        div.appendChild(document.createTextNode(text));
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+        return div;
     }
 
     textarea.addEventListener("input", function () {
         charCount.textContent = String(textarea.value.length);
     });
 
-    form.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        const date = dateInput.value;
-        const diary = textarea.value.trim();
-        if (!date || !diary) return;
+    submitBtn.addEventListener("click", async function () {
+        var entryDate = dateInput.value;
+        var diary = textarea.value.trim();
+        if (!entryDate || !diary) return;
 
-        const previous = getLatestBefore(date);
-        const payload = {
-            date: date,
+        addBubble("user", diary, entryDate);
+        textarea.value = "";
+        charCount.textContent = "0";
+
+        var loadingBubble = addBubble("loading", "...");
+        submitBtn.disabled = true;
+
+        var weekSummary = getPreviousWeekSummary(entryDate);
+        var recentDays = getRecentDays(entryDate, 3);
+
+        var payload = {
+            date: entryDate,
             diary: diary,
-            previous_state: previous ? previous.state_vec : null,
-            previous_summary: previous
-                ? ("前回(" + previous.date + "): " + previous.user_diary.slice(0, 200))
-                : "",
+            previous_state: getPreviousState(entryDate),
+            week_summary: weekSummary || "",
+            recent_days: recentDays.map(function (e) {
+                return { date: e.date, ai_diary: e.ai_diary || "" };
+            }),
         };
 
-        submitBtn.disabled = true;
-        statusCard.hidden = false;
-        statusText.textContent = "生成中（初回はモデル読み込みで数分かかります）";
-        resultCard.hidden = true;
-
         try {
-            const res = await fetch("/api/generate", {
+            var res = await fetch("/api/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || "生成に失敗しました");
-            }
-            currentResult = {
-                date: data.date,
+            var data = await res.json();
+            if (!res.ok) throw new Error(data.error || "生成に失敗しました");
+
+            chat.removeChild(loadingBubble);
+            addBubble("ai", data.ai_diary, entryDate);
+            renderEmotion(data);
+
+            var all = loadEntries();
+            all[entryDate] = {
+                date: entryDate,
                 user_diary: diary,
                 ai_diary: data.ai_diary,
                 emotion: data.emotion_after,
                 state_vec: data.state_vec,
                 created_at: new Date().toISOString(),
             };
-            renderResult(data);
+            saveEntries(all);
+            renderHistory();
+
+            checkWeekCompression(entryDate);
+
         } catch (err) {
-            statusText.textContent = "エラー: " + err.message;
-            submitBtn.disabled = false;
-            return;
+            chat.removeChild(loadingBubble);
+            addBubble("system", "エラー: " + err.message);
         }
 
-        statusCard.hidden = true;
         submitBtn.disabled = false;
     });
 
-    saveBtn.addEventListener("click", function () {
-        if (!currentResult) return;
-        const all = loadAll();
-        if (all[currentResult.date]) {
-            if (!confirm(currentResult.date + " の日記は既に存在します。上書きしますか？")) {
-                return;
-            }
-        }
-        all[currentResult.date] = currentResult;
-        saveAll(all);
-        saveBtn.textContent = "保存しました";
-        saveBtn.disabled = true;
-        renderHistory();
-    });
-
-    function renderResult(data) {
-        resultDate.textContent = data.date;
-        aiDiaryEl.textContent = data.ai_diary || "";
-        saveBtn.disabled = false;
-        saveBtn.textContent = "ブラウザに保存";
-
+    function renderEmotion(data) {
+        emotionPanel.hidden = false;
         barsEl.innerHTML = "";
         AXES.forEach(function (axis) {
-            const before = data.emotion_before[axis];
-            const after = data.emotion_after[axis];
-            const delta = after - before;
-            const row = document.createElement("div");
-            row.className = "bar-row";
+            var before = data.emotion_before[axis];
+            var after = data.emotion_after[axis];
+            var delta = after - before;
 
-            const label = document.createElement("span");
-            label.className = "bar-label";
+            var row = document.createElement("div"); row.className = "bar-row";
+            var label = document.createElement("span"); label.className = "bar-label";
             label.textContent = EMOTION_LABELS[axis];
-
-            const track = document.createElement("div");
-            track.className = "bar-track";
-            const fill = document.createElement("div");
-            fill.className = "bar-fill";
+            var track = document.createElement("div"); track.className = "bar-track";
+            var fill = document.createElement("div"); fill.className = "bar-fill";
             fill.style.width = (after * 100).toFixed(0) + "%";
             fill.style.backgroundColor = EMOTION_COLORS[axis];
             track.appendChild(fill);
-
-            const value = document.createElement("span");
-            value.className = "bar-value";
+            var value = document.createElement("span"); value.className = "bar-value";
             value.textContent = (after * 100).toFixed(0) + "%";
-
-            const deltaEl = document.createElement("span");
-            const sign = delta >= 0 ? "+" : "";
+            var deltaEl = document.createElement("span");
             deltaEl.className = "bar-delta " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "");
-            deltaEl.textContent = sign + (delta * 100).toFixed(1) + "pt";
+            deltaEl.textContent = (delta >= 0 ? "+" : "") + (delta * 100).toFixed(1);
 
             row.appendChild(label);
             row.appendChild(track);
@@ -167,135 +169,112 @@
             row.appendChild(deltaEl);
             barsEl.appendChild(row);
         });
+    }
 
-        debugEl.textContent = JSON.stringify(
-            { impacts: data.impacts, emotion_before: data.emotion_before, emotion_after: data.emotion_after },
-            null, 2
-        );
+    async function checkWeekCompression(dateStr) {
+        var weekKey = getWeekKey(dateStr);
+        var all = loadEntries();
+        var sums = loadSummaries();
 
-        resultCard.hidden = false;
-        resultCard.scrollIntoView({ behavior: "smooth" });
+        if (sums[weekKey]) return;
+
+        var weekEntries = Object.keys(all).filter(function (d) {
+            return getWeekKey(d) === weekKey;
+        }).sort();
+
+        if (weekEntries.length < 7) return;
+
+        var entries = weekEntries.map(function (d) { return all[d]; });
+        try {
+            var res = await fetch("/api/compress", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ entries: entries }),
+            });
+            var data = await res.json();
+            if (res.ok && data.summary) {
+                sums[weekKey] = data.summary;
+                saveSummaries(sums);
+            }
+        } catch (e) {}
     }
 
     function renderHistory() {
-        const all = loadAll();
-        const dates = Object.keys(all).sort().reverse();
+        var all = loadEntries();
+        var dates = Object.keys(all).sort().reverse();
         historyList.innerHTML = "";
         if (dates.length === 0) {
-            const li = document.createElement("li");
+            var li = document.createElement("li");
             li.className = "empty";
-            li.textContent = "まだ保存された日記はありません。";
+            li.textContent = "まだ記録がありません。";
             historyList.appendChild(li);
             return;
         }
         dates.forEach(function (d) {
-            const entry = all[d];
-            const li = document.createElement("li");
+            var entry = all[d];
+            var li = document.createElement("li");
             li.className = "history-item";
-
-            const header = document.createElement("div");
-            header.className = "history-header";
-
-            const dateSpan = document.createElement("span");
+            var dateSpan = document.createElement("span");
             dateSpan.className = "history-date";
             dateSpan.textContent = d;
 
-            const emoSpan = document.createElement("span");
-            emoSpan.className = "history-emotion";
-            if (entry.emotion) {
-                emoSpan.textContent =
-                    "自信" + Math.round(entry.emotion.confidence * 100) + "% / " +
-                    "好奇心" + Math.round(entry.emotion.curiosity * 100) + "% / " +
-                    "冷静" + Math.round(entry.emotion.calm * 100) + "%";
-            }
-
-            const delBtn = document.createElement("button");
-            delBtn.type = "button";
-            delBtn.className = "mini danger";
-            delBtn.textContent = "削除";
-            delBtn.addEventListener("click", function () {
-                if (!confirm(d + " の日記を削除しますか？")) return;
-                const cur = loadAll();
-                delete cur[d];
-                saveAll(cur);
-                renderHistory();
-            });
-
-            header.appendChild(dateSpan);
-            header.appendChild(emoSpan);
-            header.appendChild(delBtn);
-
-            const userP = document.createElement("p");
-            userP.className = "history-user";
-            const userLabel = document.createElement("span");
-            userLabel.className = "entry-label";
-            userLabel.textContent = "自分: ";
-            userP.appendChild(userLabel);
-            userP.appendChild(document.createTextNode(entry.user_diary));
-
-            const aiP = document.createElement("p");
-            aiP.className = "history-ai";
-            const aiLabel = document.createElement("span");
-            aiLabel.className = "entry-label";
-            aiLabel.textContent = "カイ: ";
-            aiP.appendChild(aiLabel);
-            aiP.appendChild(document.createTextNode(entry.ai_diary));
-
-            const details = document.createElement("details");
-            const summary = document.createElement("summary");
-            summary.textContent = "本文を読む";
+            var details = document.createElement("details");
+            var summary = document.createElement("summary");
+            summary.appendChild(dateSpan);
             details.appendChild(summary);
+
+            var userP = document.createElement("p");
+            userP.textContent = entry.user_diary;
+            var aiP = document.createElement("p");
+            aiP.textContent = entry.ai_diary;
             details.appendChild(userP);
             details.appendChild(aiP);
 
-            li.appendChild(header);
             li.appendChild(details);
             historyList.appendChild(li);
         });
     }
 
     exportBtn.addEventListener("click", function () {
-        const data = loadAll();
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-            type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        var data = { entries: loadEntries(), summaries: loadSummaries() };
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
         a.href = url;
-        a.download = "quantum_diary_export_" + new Date().toISOString().slice(0, 10) + ".json";
+        a.download = "quantum_diary_" + new Date().toISOString().slice(0, 10) + ".json";
         a.click();
         URL.revokeObjectURL(url);
     });
 
-    importBtn.addEventListener("click", function () {
-        importFile.click();
-    });
+    importBtn.addEventListener("click", function () { importFile.click(); });
 
     importFile.addEventListener("change", function () {
-        const file = importFile.files[0];
+        var file = importFile.files[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            alert("ファイルサイズが大きすぎます（5MB上限）");
-            return;
-        }
-        const reader = new FileReader();
+        if (file.size > 5 * 1024 * 1024) { alert("5MB上限"); return; }
+        var reader = new FileReader();
         reader.onload = function () {
             try {
-                const parsed = JSON.parse(String(reader.result));
-                if (!parsed || typeof parsed !== "object") throw new Error("不正な形式");
-                const current = loadAll();
-                let count = 0;
-                Object.keys(parsed).forEach(function (k) {
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(k) && parsed[k] && typeof parsed[k] === "object") {
-                        current[k] = parsed[k];
-                        count += 1;
-                    }
+                var parsed = JSON.parse(String(reader.result));
+                var entries = parsed.entries || parsed;
+                var summaries = parsed.summaries || {};
+                if (typeof entries !== "object") throw new Error("不正な形式");
+
+                var cur = loadEntries();
+                var count = 0;
+                Object.keys(entries).forEach(function (k) {
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(k)) { cur[k] = entries[k]; count++; }
                 });
-                saveAll(current);
+                saveEntries(cur);
+
+                var curSum = loadSummaries();
+                Object.keys(summaries).forEach(function (k) { curSum[k] = summaries[k]; });
+                saveSummaries(curSum);
+
                 renderHistory();
-                alert(count + " 件の日記をインポートしました。");
+                alert(count + "件インポートしました。");
             } catch (e) {
-                alert("インポートに失敗しました: " + e.message);
+                alert("インポート失敗: " + e.message);
             }
             importFile.value = "";
         };
@@ -303,10 +282,9 @@
     });
 
     clearBtn.addEventListener("click", function () {
-        if (!confirm("保存された日記をすべて削除します。よろしいですか？\n（エクスポートでバックアップを取ってからの実行を推奨）")) {
-            return;
-        }
+        if (!confirm("すべての記録を削除します。よろしいですか？")) return;
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(SUMMARIES_KEY);
         renderHistory();
     });
 

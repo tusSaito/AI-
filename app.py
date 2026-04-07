@@ -8,6 +8,7 @@ from flask import Flask, jsonify, render_template, request
 
 from core import sentiment
 from core.diary_writer import write_diary
+from core.memory import compress_week
 from core.quantum_emotion import AXES, QuantumEmotionState
 
 MAX_INPUT_CHARS = 4000
@@ -62,7 +63,8 @@ def api_generate():
     entry_date = str(payload.get("date", "")).strip()
     user_text = str(payload.get("diary", "")).strip()
     previous_state = payload.get("previous_state")
-    previous_summary = str(payload.get("previous_summary", "")).strip()[:600] or None
+    week_summary = str(payload.get("week_summary", "")).strip()[:600] or None
+    recent_days = payload.get("recent_days") or []
 
     if not DATE_RE.match(entry_date):
         return jsonify({"error": "日付形式が不正です (YYYY-MM-DD)"}), 400
@@ -75,6 +77,10 @@ def api_generate():
     if len(user_text) > MAX_INPUT_CHARS:
         return jsonify({"error": f"本文は{MAX_INPUT_CHARS}文字以内にしてください"}), 400
 
+    if not isinstance(recent_days, list):
+        recent_days = []
+    recent_days = recent_days[:7]
+
     emotion = _parse_previous_state(previous_state)
     probs_before = emotion.probabilities()
 
@@ -82,7 +88,11 @@ def api_generate():
     emotion.update(impacts)
     probs_after = emotion.probabilities()
 
-    ai_diary = write_diary(entry_date, user_text, emotion, previous_summary)
+    ai_diary = write_diary(
+        entry_date, user_text, emotion,
+        week_summary=week_summary,
+        recent_days=recent_days,
+    )
 
     return jsonify(
         {
@@ -94,6 +104,17 @@ def api_generate():
             "state_vec": emotion.to_dict(),
         }
     )
+
+
+@app.post("/api/compress")
+def api_compress():
+    payload = request.get_json(silent=True) or {}
+    entries = payload.get("entries") or []
+    if not isinstance(entries, list) or len(entries) == 0:
+        return jsonify({"error": "entries が空です"}), 400
+    entries = entries[:7]
+    summary = compress_week(entries)
+    return jsonify({"summary": summary})
 
 
 if __name__ == "__main__":

@@ -6,14 +6,10 @@ import re
 from .llm import generate
 
 SYSTEM_PROMPT = (
-    "あなたは感情分析の専門家です。"
-    "与えられた文章を読んだ人物の感情に、その文章がどのような影響を与えるかを"
-    "分析してください。出力はJSONのみとし、前後に説明文を一切含めないでください。\n"
-    "各値は -1.0（ネガティブ方向）〜 +1.0（ポジティブ方向）の float:\n"
-    '{"confidence": 0.0, "curiosity": 0.0, "calm": 0.0}\n'
-    "- confidence: 自信↔不安\n"
-    "- curiosity: 好奇心↔倦怠\n"
-    "- calm: 冷静↔焦燥\n"
+    "文章の感情的な影響をJSON一つで返して。説明不要。\n"
+    "confidence: 自信↔不安, curiosity: 好奇心↔倦怠, calm: 冷静↔焦燥\n"
+    "各値は -1.0〜+1.0\n"
+    '例: {"confidence": 0.3, "curiosity": -0.1, "calm": 0.5}'
 )
 
 
@@ -21,7 +17,7 @@ def analyze(text: str) -> dict[str, float]:
     safe_text = text.strip()[:4000]
     response = generate(
         system=SYSTEM_PROMPT,
-        user=f"文章:\n{safe_text}",
+        user=safe_text,
         max_new_tokens=128,
         temperature=0.2,
     )
