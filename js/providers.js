@@ -7,7 +7,8 @@ async function callGemini({ system, user, maxNewTokens = 512, temperature = 0.7 
   const cfg = loadProviderConfig().gemini;
   if (!cfg.apiKey) throw new Error('Gemini API キーが設定されていません');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent`;
+  // ?key= クエリパラメータはブラウザ CORS で確実に動作する
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${cfg.apiKey}`;
   const body = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
@@ -20,10 +21,7 @@ async function callGemini({ system, user, maxNewTokens = 512, temperature = 0.7 
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': cfg.apiKey
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
   if (!res.ok) {
