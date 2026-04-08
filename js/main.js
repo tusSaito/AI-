@@ -264,7 +264,7 @@ function showTutorial() {
 const MODEL_OPTIONS = {
   local: [], gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
   openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1', 'gpt-4.1-mini'],
-  claude: ['claude-sonnet-4-20250514', 'claude-haiku-3.5-20241022']
+  claude: ['claude-sonnet-4-6-20250514', 'claude-haiku-4-5-20251001', 'claude-opus-4-6-20250514']
 };
 
 function initProviderUI(sel, keyEl, modelEl, urlGroup, urlEl) {

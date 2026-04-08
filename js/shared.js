@@ -38,7 +38,7 @@ export function loadProviderConfig() {
     provider: 'local',
     gemini:  { apiKey: '', model: 'gemini-2.5-flash' },
     openai:  { apiKey: '', model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com/v1' },
-    claude:  { apiKey: '', model: 'claude-sonnet-4-20250514' }
+    claude:  { apiKey: '', model: 'claude-sonnet-4-6-20250514' }
   });
 }
 export function saveProviderConfig(cfg) { saveJSON(KEYS.PROVIDER_CONFIG, cfg); }
