@@ -28,8 +28,25 @@ export function saveConversation(msgs) { saveJSON(KEYS.CONVERSATION, msgs); }
 
 export function loadMemory() {
   return loadJSON(KEYS.MEMORY, {
-    context: '', themes: [], strengths: '', challenges: '', growth: '', updated_at: ''
+    context: '', themes: [], strengths: '', challenges: '', growth: '', episodes: [], updated_at: ''
   });
+}
+
+/** localStorage の使用量を概算 (bytes) */
+export function getStorageUsage() {
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    total += key.length + (localStorage.getItem(key)?.length || 0);
+  }
+  return total * 2; // UTF-16
+}
+
+/** 使用量を人間可読な文字列に */
+export function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 export function saveMemory(mem) { saveJSON(KEYS.MEMORY, mem); }
 

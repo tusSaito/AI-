@@ -1,4 +1,4 @@
-// 日記生成パイプライン — 感情分析 → 量子更新 → 日記生成
+// 日記生成パイプライン — 感情分析 → 状態更新 → 日記生成
 
 import { generate } from './llm.js';
 import { SYSTEM_PROMPT, PERSONA_NAME } from './persona.js';
@@ -10,52 +10,54 @@ import {
   loadMemory, nowISO, KEYS, saveJSON
 } from './shared.js';
 
-/**
- * 日記生成パイプラインを実行
- * @param {string} dateStr - YYYY-MM-DD
- * @param {string} userName
- * @param {Array} conversation - 今回の会話ログ
- * @param {object|null} previousStateVec - 前回の量子状態ベクトル
- * @returns {object} Entry オブジェクト
- */
 export async function runPipeline(dateStr, userName, conversation, previousStateVec) {
-  // 1. 全会話テキストを結合
   const userTexts = conversation
     .filter(m => m.role === 'user')
     .map(m => m.content)
     .join('\n');
 
-  // 2. 感情分析（古典 + 量子を並列実行）
+  // 感情分析（並列）
   const [classical, quantum] = await Promise.all([
     analyzeClassical(userTexts),
     analyzeQuantum(userTexts)
   ]);
 
-  // 3. 量子状態更新
+  // 状態更新
   const stateVec = validateOrReset(previousStateVec);
   const emotionBefore = probabilities(stateVec);
   const newStateVec = updateState(stateVec, quantum);
   const emotionAfter = probabilities(newStateVec);
 
-  // 4. 長期記憶を更新
-  await updateMemory(conversation);
+  // 長期記憶を更新（日付付き）
+  await updateMemory(conversation, dateStr);
   const memory = loadMemory();
 
-  // 5. 日記生成
+  // 過去の日記を取得（直近3件）
+  const entries = loadEntries();
+  const pastDiaries = Object.values(entries)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 3)
+    .map(e => `[${e.date}] ${(e.ai_diary || '').slice(0, 150)}`)
+    .join('\n');
+
+  // 今回の会話要約
   const conversationSummary = conversation.slice(-10)
     .map(m => `${m.role === 'user' ? (userName || 'ユーザー') : PERSONA_NAME}: ${m.content}`)
     .join('\n');
 
+  // コンテキスト構築
   let memCtx = '';
-  if (memory.context || memory.themes?.length) {
-    const parts = [];
-    if (memory.context) parts.push(`背景: ${memory.context}`);
-    if (memory.themes?.length) parts.push(`テーマ: ${memory.themes.join('、')}`);
-    if (memory.growth) parts.push(`変化: ${memory.growth}`);
-    memCtx = `\n\n【相手について】\n${parts.join('\n')}`;
-  }
+  const parts = [];
+  if (memory.context) parts.push(`背景: ${memory.context}`);
+  if (memory.themes?.length) parts.push(`テーマ: ${memory.themes.join('、')}`);
+  if (memory.growth) parts.push(`変化: ${memory.growth}`);
+  if (memory.episodes?.length) parts.push(`最近のエピソード:\n${memory.episodes.slice(-5).join('\n')}`);
+  if (parts.length) memCtx = `\n\n【相手について】\n${parts.join('\n')}`;
 
-  const diaryPrompt = `${SYSTEM_PROMPT}${memCtx}
+  let pastCtx = '';
+  if (pastDiaries) pastCtx = `\n\n【最近の日記】\n${pastDiaries}`;
+
+  const diaryPrompt = `${SYSTEM_PROMPT}${memCtx}${pastCtx}
 
 今日の感情状態:
 - 自信: ${(emotionAfter.confidence * 100).toFixed(0)}%
@@ -66,6 +68,7 @@ export async function runPipeline(dateStr, userName, conversation, previousState
 ${conversationSummary}
 
 上記をふまえ、${PERSONA_NAME}の視点で今日の日記を書いて。
+過去の日記やエピソードの流れを意識し、相手の変化や成長に触れてもよい。
 ${userName ? `相手は「${userName}」。` : ''}
 300〜500文字。一人称「僕」。である調。内省的に。`;
 
@@ -76,7 +79,6 @@ ${userName ? `相手は「${userName}」。` : ''}
     temperature: 0.85
   });
 
-  // 6. Entry を構築
   const entry = {
     date: dateStr,
     created_at: nowISO(),
@@ -88,18 +90,14 @@ ${userName ? `相手は「${userName}」。` : ''}
     state_vec: newStateVec
   };
 
-  // 一時保存（diary.html で表示用）
   saveJSON(KEYS.CURRENT_RESULT, entry);
-
   return entry;
 }
 
-/** 生成済みエントリを永続保存 */
 export function saveEntry(entry) {
   const entries = loadEntries();
   entries[entry.date] = entry;
   saveEntries(entries);
-  // 会話をクリア
   saveConversation([]);
   localStorage.removeItem(KEYS.CURRENT_RESULT);
 }

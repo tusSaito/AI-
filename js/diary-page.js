@@ -3,7 +3,7 @@
 import {
   KEYS, loadJSON, loadEntries, saveEntries,
   renderEmotionBars, renderClassicalBars,
-  initThemeToggle
+  initThemeToggle, getStorageUsage, formatBytes
 } from './shared.js';
 import { PERSONA_NAME } from './persona.js';
 import { saveEntry } from './pipeline.js';
@@ -38,6 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const entries = loadEntries();
     const sorted = Object.values(entries).sort((a, b) => b.date.localeCompare(a.date));
     entryCount.textContent = sorted.length;
+    const storageEl = document.getElementById('storage-usage');
+    if (storageEl) {
+      const used = getStorageUsage();
+      const pct = (used / (5 * 1024 * 1024) * 100).toFixed(0);
+      storageEl.textContent = `${formatBytes(used)} / 5 MB (${pct}%)`;
+      if (used > 4 * 1024 * 1024) storageEl.classList.add('text-red-400');
+    }
 
     // 新規日記（未保存）
     const pending = loadJSON(KEYS.CURRENT_RESULT, null);
