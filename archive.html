@@ -1,72 +1,153 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Penguin Dyle — 記録</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Penguin Dyle — 記録</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="dark.css" rel="stylesheet">
+    <style>
+        body { overscroll-behavior-y: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.5); border-radius: 3px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-header { text-align: center; font-size: 0.7rem; font-weight: 700; color: #94a3b8; padding: 4px 0; }
+        .cal-day { text-align: center; font-size: 0.8rem; padding: 6px 2px; border-radius: 8px; position: relative; cursor: default; color: #64748b; min-height: 36px; }
+        .cal-day.today { background: #e0f2fe; color: #0369a1; font-weight: 700; }
+        .cal-day.has-entry { cursor: pointer; font-weight: 600; color: #1e293b; }
+        .cal-day.has-entry:hover { background: #f1f5f9; }
+        .cal-dot { width: 6px; height: 6px; border-radius: 50%; margin: 2px auto 0; }
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .mini-graph { position: relative; width: 100%; height: 160px; }
+        .mini-graph canvas { width: 100%; height: 100%; }
+        .history-item { cursor: pointer; transition: background 0.15s; }
+        .history-item:hover { background: #f8fafc; }
+    </style>
 </head>
-<body>
-  <div class="app">
-    <header>
-      <div>
-        <h1>Penguin Dyle</h1>
-        <span class="subtitle">ペンギン大流の日記</span>
-      </div>
-      <nav>
-        <a href="index.html"><i class="fa-solid fa-comments"></i> 会話</a>
-        <a href="diary.html"><i class="fa-solid fa-book"></i> 日記</a>
-        <a href="archive.html" class="active"><i class="fa-solid fa-chart-line"></i> 記録</a>
-        <button class="btn-icon" id="theme-toggle" title="テーマ切替">
-          <i class="fa-solid fa-moon"></i>
-        </button>
-      </nav>
-    </header>
+<body class="bg-gray-100 h-screen w-screen overflow-hidden flex flex-col md:flex-row font-sans text-slate-800">
 
-    <div class="content" style="max-width:960px">
-      <section>
-        <h2><i class="fa-solid fa-calendar"></i> カレンダー</h2>
-        <div class="calendar-header">
-          <button class="btn-icon" id="prev-month"><i class="fa-solid fa-chevron-left"></i></button>
-          <span id="month-label"></span>
-          <button class="btn-icon" id="next-month"><i class="fa-solid fa-chevron-right"></i></button>
+    <aside class="w-full md:w-80 lg:w-96 bg-slate-900 text-white flex flex-col h-auto md:h-full shrink-0 shadow-xl z-20 overflow-y-auto">
+        <div class="p-6 flex flex-col items-center justify-center border-b border-slate-700">
+            <div class="w-24 h-24 rounded-full bg-slate-800 mb-4 border-2 border-slate-600 overflow-hidden flex items-center justify-center shadow-inner">
+                <img src="img/dyle.png" alt="ダイル" class="w-full h-full object-cover" onerror="this.src='img/dyle.svg'">
+            </div>
+            <h1 class="text-xl font-bold tracking-wide">ペンギン大流 <span class="text-sm text-slate-400 font-normal">（ダイル）</span></h1>
+            <p class="text-xs text-slate-400 mt-3 text-center leading-relaxed">
+                元・量子物理の研究者。<br>あなたの本音を、問いかけで引き出す。
+            </p>
         </div>
-        <div id="calendar-grid"></div>
-      </section>
 
-      <section>
-        <h2><i class="fa-solid fa-chart-area"></i> 感情の推移</h2>
-        <div class="range-bar">
-          <button class="range-btn" data-range="7">7日</button>
-          <button class="range-btn active" data-range="30">1ヶ月</button>
-          <button class="range-btn" data-range="all">全期間</button>
+        <div class="p-6 flex-1 flex flex-col gap-4">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <p class="text-xs text-slate-400 font-semibold tracking-wider mb-3">データ管理</p>
+                <div class="flex flex-col gap-2">
+                    <button type="button" id="export-btn"
+                            class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> エクスポート (JSON)
+                    </button>
+                    <button type="button" id="import-btn"
+                            class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-upload"></i> インポート
+                    </button>
+                    <button type="button" id="clear-btn"
+                            class="w-full bg-red-900/40 hover:bg-red-900/60 text-red-300 py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash-can"></i> 全削除
+                    </button>
+                    <input type="file" id="import-file" accept="application/json" hidden>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-4">
+                <a href="index.html" class="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl text-sm transition border border-slate-700">
+                    <i class="fa-solid fa-plus mr-1"></i> 新しい会話を始める
+                </a>
+            </div>
         </div>
-        <div id="graphs"></div>
-      </section>
 
-      <section>
-        <h2><i class="fa-solid fa-list"></i> 日記一覧</h2>
-        <div class="search-bar">
-          <input type="text" id="search-input" placeholder="キーワードで検索…">
+        <nav class="flex justify-around border-t border-slate-800 bg-slate-900/50 p-2">
+            <a href="index.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-message text-lg mb-1"></i><span class="text-[10px]">会話</span>
+            </a>
+            <a href="diary.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-book text-lg mb-1"></i><span class="text-[10px]">日記</span>
+            </a>
+            <a href="archive.html" class="flex flex-col items-center p-2 text-blue-400 transition">
+                <i class="fa-solid fa-chart-bar text-lg mb-1"></i><span class="text-[10px]">記録</span>
+            </a>
+            <button id="theme-toggle" class="flex flex-col items-center p-2 text-slate-400 hover:text-white transition" title="テーマ切替">
+                <i class="fa-solid fa-moon text-lg mb-1"></i><span class="text-[10px]">テーマ</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col bg-slate-50 h-full relative w-full min-h-0">
+        <header class="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
+            <img src="img/dyle.png" alt="ダイル" class="w-8 h-8 rounded-full object-cover mr-3 border-2 border-slate-200 md:hidden" onerror="this.src='img/dyle.svg'">
+            <h2 class="font-bold text-gray-800 text-lg">記録を振り返る</h2>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-6">
+            <p class="text-xs text-gray-400 mb-4 bg-gray-100 border border-gray-200 rounded-lg p-3 leading-relaxed">
+                <i class="fa-solid fa-circle-info mr-1 text-blue-400"></i>
+                カレンダーで日記を書いた日を確認、グラフで感情の推移を可視化、一覧から過去の日記を検索・閲覧できます。
+            </p>
+
+            <div class="flex gap-2 mb-4">
+                <button class="tab-btn flex-1 py-2 px-3 text-sm font-semibold rounded-lg border-2 border-gray-200 text-gray-500 active" data-tab="calendar">
+                    <i class="fa-solid fa-calendar-days mr-1"></i> カレンダー
+                </button>
+                <button class="tab-btn flex-1 py-2 px-3 text-sm font-semibold rounded-lg border-2 border-gray-200 text-gray-500" data-tab="graph">
+                    <i class="fa-solid fa-chart-line mr-1"></i> 感情グラフ
+                </button>
+                <button class="tab-btn flex-1 py-2 px-3 text-sm font-semibold rounded-lg border-2 border-gray-200 text-gray-500" data-tab="list">
+                    <i class="fa-solid fa-list mr-1"></i> 一覧・検索
+                </button>
+            </div>
+
+            <div id="tab-calendar" class="tab-content active">
+                <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="cal-prev" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+                        <span id="cal-month" class="text-sm font-bold text-slate-700"></span>
+                        <button id="cal-next" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="cal-grid" id="calendar-grid"></div>
+                </div>
+            </div>
+
+            <div id="tab-graph" class="tab-content">
+                <div class="flex gap-2 mb-4">
+                    <button data-range="7" class="graph-range-btn px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition active">1週間</button>
+                    <button data-range="30" class="graph-range-btn px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition">1ヶ月</button>
+                    <button data-range="0" class="graph-range-btn px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition">全期間</button>
+                </div>
+                <div id="graphs-container" class="flex flex-col gap-4"></div>
+            </div>
+
+            <div id="tab-list" class="tab-content">
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-3 border-b border-gray-100">
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" id="search-input" placeholder="キーワードで検索..."
+                                   class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition">
+                        </div>
+                    </div>
+                    <ul id="history-list" class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto"></ul>
+                </div>
+            </div>
         </div>
-        <div id="entry-list"></div>
-      </section>
+    </main>
 
-      <section>
-        <h2><i class="fa-solid fa-database"></i> データ管理</h2>
-        <div class="data-actions">
-          <button class="btn" id="export-btn"><i class="fa-solid fa-download"></i> エクスポート</button>
-          <button class="btn btn-ghost" id="import-btn"><i class="fa-solid fa-upload"></i> インポート</button>
-          <button class="btn btn-ghost" id="clear-btn" style="color:var(--danger);border-color:var(--danger)">
-            <i class="fa-solid fa-trash"></i> 全データ削除
-          </button>
-          <input type="file" id="import-file" accept="application/json" hidden>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <script type="module" src="js/archive-page.js"></script>
+    <script type="module" src="js/archive-page.js"></script>
 </body>
 </html>
