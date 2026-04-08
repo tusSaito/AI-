@@ -16,24 +16,27 @@ AI キャラクター「ペンギン大流（ダイル）」と会話しなが�
 
 ## はじめかた
 
-### 1. ローカルサーバを起動
+### GitHub Pages で使う（推奨）
 
-ES Modules を使用するため、HTTP サーバが必要です。
+GitHub Pages で公開済みの場合、以下の URL にアクセスするだけで使えます。
+
+```
+https://<username>.github.io/<repo-name>/
+```
+
+サーバのセットアップは不要です。Chrome 113+ または Edge 113+ を使用してください。
+
+### ローカルで開発する場合
+
+ES Modules を使用するため、ローカルでは HTTP サーバが必要です。
 
 ```bash
 # macOS: start.command をダブルクリック、または:
 python3 -m http.server 8765
+# → http://localhost:8765 でアクセス
 ```
 
-### 2. ブラウザでアクセス
-
-```
-http://localhost:8765
-```
-
-Chrome 113+ または Edge 113+（WebGPU 対応）を使用してください。
-
-### 3. 推論モードを選択
+### 推論モードを選択
 
 | モード | 必要なもの | 特徴 |
 |--------|-----------|------|
@@ -112,12 +115,15 @@ export const SYSTEM_PROMPT = `あなたは…`;
 | JavaScript | Vanilla ES6 Modules |
 | ストレージ | localStorage + IndexedDB |
 
-## GitHub Pages
+## GitHub Pages での公開方法
 
-静的ファイルのみで構成されているため、GitHub Pages でそのまま公開可能です。
+静的ファイルのみで構成されているため、GitHub Pages でそのまま公開できます。
 
-1. Settings → Pages → Source を `main` ブランチの `/` に設定
-2. `https://<username>.github.io/<repo-name>/` でアクセス
+1. リポジトリの **Settings → Pages** を開く
+2. Source を `main` ブランチの `/` (root) に設定
+3. 数分後に `https://<username>.github.io/<repo-name>/` でアクセス可能に
+
+ローカルサーバは不要です。
 
 ## ライセンス
 

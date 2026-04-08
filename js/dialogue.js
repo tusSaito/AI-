@@ -44,10 +44,21 @@ ${recent || '（まだ会話していない）'}
 
 /** 自動挨拶メッセージ */
 export async function generateGreeting(userName = '') {
-  const system = `${SYSTEM_PROMPT}
+  const memory = loadMemory();
+  const hasMemory = memory.context || memory.themes?.length;
+
+  let memCtx = '';
+  if (hasMemory) {
+    const parts = [];
+    if (memory.context) parts.push(`背景: ${memory.context}`);
+    if (memory.themes?.length) parts.push(`最近の話題: ${memory.themes.join('、')}`);
+    memCtx = `\n\n【この常連客について知っていること】\n${parts.join('\n')}`;
+  }
+
+  const system = `${SYSTEM_PROMPT}${memCtx}
 
 ${userName ? `相手の名前は「${userName}」。` : ''}
-喫茶店のカウンターで、今日初めて来た客（または常連）に声をかける一言を生成して。自然に、短く（100文字以内）。`;
+喫茶店のカウンターで、${hasMemory ? '常連客' : '今日初めて来た客'}に声をかける一言を生成して。${hasMemory ? '前回の話題にさりげなく触れてもよい。' : ''}自然に、短く（100文字以内）。`;
 
   return generate({
     system,
