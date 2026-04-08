@@ -1,10 +1,10 @@
+.claude/
+.DS_Store
+node_modules/
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
 .venv/
 venv/
-storage/*.db
-storage/*.db-journal
-.DS_Store
 *.log

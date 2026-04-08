@@ -1,0 +1,49 @@
+/* ダークモード用スタイル */
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #3b82f6;
+  --accent-light: #60a5fa;
+  --border: #334155;
+}
+
+body { background: var(--bg); color: var(--text); }
+
+header { background: #1e293b; }
+
+.sidebar { background: var(--surface); border-color: var(--border); }
+.sidebar input, .sidebar select {
+  background: var(--bg); color: var(--text); border-color: var(--border);
+}
+
+.input-section { background: var(--surface); border-color: var(--border); }
+.input-section textarea { background: var(--bg); color: var(--text); border-color: var(--border); }
+
+.bubble-assistant { background: var(--surface); border-color: var(--border); color: var(--text); }
+.bubble-user { background: var(--accent); }
+
+.diary-card { background: var(--surface); border-color: var(--border); }
+.diary-new-card { background: #1c1917; border-color: #d97706; }
+
+.emotion-bar-wrap { background: var(--border); }
+
+.cal-day { background: var(--surface); }
+.mini-chart { background: var(--surface); border-color: var(--border); }
+
+.entry-item { background: var(--surface); border-color: var(--border); }
+.entry-item:hover { background: var(--bg); }
+
+.search-bar input { background: var(--bg); color: var(--text); border-color: var(--border); }
+
+.btn { background: var(--accent); }
+.btn:hover { background: var(--accent-light); }
+.btn-ghost { border-color: var(--border); color: var(--muted); }
+.btn-ghost:hover { background: var(--surface); }
+
+.tutorial-card { background: var(--surface); color: var(--text); }
+.tutorial-card p { color: var(--muted); }
+
+.range-btn { background: var(--surface); border-color: var(--border); color: var(--text); }
+.range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
