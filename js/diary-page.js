@@ -73,12 +73,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.createElement('div');
     header.className = 'flex items-center gap-3 mb-4';
     header.innerHTML = `
-      <img src="img/dyle.png" alt="${PERSONA_NAME}" class="w-10 h-10 rounded-full object-cover border-2 border-slate-200" onerror="this.src='img/dyle.svg'">
+      <img src="img/dyle.png" alt="" class="w-10 h-10 rounded-full object-cover border-2 border-slate-200" onerror="this.src='img/dyle.svg'">
       <div class="flex-1">
-        <h3 class="font-bold text-gray-800 text-sm">${PERSONA_NAME}の日記</h3>
-        <span class="text-xs text-gray-400">${entry.date}</span>
+        <h3 class="font-bold text-gray-800 text-sm"></h3>
+        <span class="text-xs text-gray-400"></span>
         ${isNew ? '<span class="ml-2 text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-semibold">NEW</span>' : ''}
       </div>`;
+    header.querySelector('h3').textContent = `${PERSONA_NAME}の日記`;
+    header.querySelector('span.text-gray-400').textContent = entry.date;
 
     if (!isNew) {
       const delBtn = document.createElement('button');

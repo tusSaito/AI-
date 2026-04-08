@@ -220,10 +220,18 @@ function renderList(filter = '') {
   for (const entry of sorted) {
     const li = document.createElement('li');
     li.className = 'history-item p-3 flex items-center gap-3';
-    li.innerHTML = `
-      <span class="text-xs font-bold text-blue-600 min-w-[80px]">${entry.date}</span>
-      <span class="text-xs text-gray-500 truncate flex-1">${escape(entry.ai_diary?.slice(0, 80) || '')}…</span>`;
-    li.addEventListener('click', () => { window.location.href = `diary.html#${entry.date}`; });
+
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'text-xs font-bold text-blue-600 min-w-[80px]';
+    dateSpan.textContent = entry.date;
+
+    const previewSpan = document.createElement('span');
+    previewSpan.className = 'text-xs text-gray-500 truncate flex-1';
+    previewSpan.textContent = (entry.ai_diary || '').slice(0, 80) + '…';
+
+    li.appendChild(dateSpan);
+    li.appendChild(previewSpan);
+    li.addEventListener('click', () => { window.location.href = `diary.html#${encodeURIComponent(entry.date)}`; });
     list.appendChild(li);
   }
 }
@@ -253,11 +261,31 @@ function initExportImport() {
       try {
         const data = JSON.parse(reader.result);
         if (data.entries && typeof data.entries === 'object') {
+          // エントリのバリデーション: 日付キーとデータ構造を検証
+          const validated = {};
+          for (const [key, entry] of Object.entries(data.entries)) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
+            if (!entry || typeof entry !== 'object') continue;
+            if (typeof entry.ai_diary !== 'string') continue;
+            validated[key] = {
+              date: key,
+              created_at: typeof entry.created_at === 'string' ? entry.created_at : '',
+              ai_diary: entry.ai_diary,
+              conversation: Array.isArray(entry.conversation) ? entry.conversation : [],
+              sentiment: entry.sentiment && typeof entry.sentiment === 'object' ? entry.sentiment : {},
+              emotion_before: entry.emotion_before && typeof entry.emotion_before === 'object' ? entry.emotion_before : {},
+              emotion_after: entry.emotion_after && typeof entry.emotion_after === 'object' ? entry.emotion_after : {},
+              state_vec: entry.state_vec && typeof entry.state_vec === 'object' ? entry.state_vec : {}
+            };
+          }
+          if (Object.keys(validated).length === 0) { alert('有効な日記エントリがありません'); return; }
           const merge = confirm('既存データとマージしますか？\n「OK」= マージ、「キャンセル」= 上書き');
-          if (merge) { const cur = loadEntries(); Object.assign(cur, data.entries); saveEntries(cur); }
-          else saveEntries(data.entries);
+          if (merge) { const cur = loadEntries(); Object.assign(cur, validated); saveEntries(cur); }
+          else saveEntries(validated);
         }
-        if (data.memory) localStorage.setItem(KEYS.MEMORY, JSON.stringify(data.memory));
+        if (data.memory && typeof data.memory === 'object') {
+          localStorage.setItem(KEYS.MEMORY, JSON.stringify(data.memory));
+        }
         renderCalendar(); renderGraphs(); renderList();
         alert('インポート完了');
       } catch { alert('ファイルの読み込みに失敗しました'); }
@@ -273,10 +301,4 @@ function initExportImport() {
     renderCalendar(); renderGraphs(); renderList();
     alert('すべてのデータを削除しました');
   });
-}
-
-function escape(text) {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
 }
