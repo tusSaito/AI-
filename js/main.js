@@ -185,6 +185,8 @@ function updateProviderFields(cfg) {
       const c = loadProviderConfig();
       c[p].apiKey = apiKeyInput.value;
       saveProviderConfig(c);
+      // キー入力後に挨拶を試みる
+      if (apiKeyInput.value && !greeted) autoGreet();
     };
   }
   if (apiKeyToggle) {
@@ -216,7 +218,7 @@ function appendBubble(role, text) {
 
   if (role === 'assistant') {
     const avatar = document.createElement('img');
-    avatar.src = 'img/dyle.png';
+    avatar.src = 'img/dyle.svg';
     avatar.alt = PERSONA_NAME;
     avatar.className = 'avatar';
     avatar.onerror = function() { this.style.display = 'none'; };
@@ -317,9 +319,17 @@ async function handleDiaryGeneration() {
 let greeted = false;
 async function autoGreet() {
   if (greeted) return;
-  greeted = true;
   const msgs = loadConversation();
-  if (msgs.length > 0) return; // 復帰時はスキップ
+  if (msgs.length > 0) { greeted = true; return; }
+
+  // API モードではキーが入力されるまで挨拶しない
+  const cfg = loadProviderConfig();
+  if (cfg.provider !== 'local') {
+    const provCfg = cfg[cfg.provider];
+    if (!provCfg?.apiKey) return; // キー未入力なのでスキップ（greeted は false のまま）
+  }
+
+  greeted = true;
   try {
     const userName = localStorage.getItem(KEYS.USER_NAME) || '';
     const greeting = await generateGreeting(userName);

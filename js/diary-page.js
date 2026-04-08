@@ -47,7 +47,7 @@ function renderNewDiary() {
   container.innerHTML = `
     <div class="diary-new-card">
       <div class="diary-header">
-        <img src="img/dyle.png" alt="${PERSONA_NAME}" class="avatar"
+        <img src="img/dyle.svg" alt="${PERSONA_NAME}" class="avatar"
              onerror="this.style.display='none'">
         <div>
           <strong>${PERSONA_NAME}の日記</strong>
@@ -113,7 +113,7 @@ function renderDiaryList() {
     card.className = 'diary-card';
     card.innerHTML = `
       <div class="diary-header">
-        <img src="img/dyle.png" alt="${PERSONA_NAME}" class="avatar"
+        <img src="img/dyle.svg" alt="${PERSONA_NAME}" class="avatar"
              onerror="this.style.display='none'">
         <div>
           <strong>${PERSONA_NAME}の日記</strong>
