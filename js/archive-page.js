@@ -2,9 +2,8 @@
 
 import {
   KEYS, loadEntries, saveEntries, loadJSON,
-  applyTheme, currentTheme, formatDate
+  applyTheme, currentTheme
 } from './shared.js';
-import { PERSONA_NAME } from './persona.js';
 
 let currentMonth = new Date();
 let graphRange = '30';  // '7' | '30' | 'all'

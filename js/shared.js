@@ -56,25 +56,12 @@ export function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 export function nowISO() { return new Date().toISOString().slice(0, 19); }
-export function formatDate(iso) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-}
-export function getISOWeek(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  const weekNum = 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-  return `${d.getFullYear()}-W${String(weekNum).padStart(2,'0')}`;
-}
 
 // ── 感情バー描画 ──
 const AXIS_LABELS = { confidence: '自信', curiosity: '好奇心', calm: '冷静' };
 const AXIS_COLORS = { confidence: '#f59e0b', curiosity: '#3b82f6', calm: '#10b981' };
 
 export function renderEmotionBars(container, before, after) {
-  container.innerHTML = '';
   for (const axis of ['confidence', 'curiosity', 'calm']) {
     const bVal = before ? before[axis] ?? 0.5 : 0.5;
     const aVal = after  ? after[axis]  ?? 0.5 : 0.5;

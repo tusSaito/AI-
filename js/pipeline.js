@@ -6,7 +6,7 @@ import { analyzeClassical, analyzeQuantum } from './sentiment.js';
 import { updateState, probabilities, validateOrReset } from './quantum.js';
 import { updateMemory } from './memory.js';
 import {
-  loadEntries, saveEntries, loadConversation, saveConversation,
+  loadEntries, saveEntries, saveConversation,
   loadMemory, nowISO, KEYS, saveJSON
 } from './shared.js';
 

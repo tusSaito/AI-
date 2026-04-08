@@ -1,17 +1,14 @@
 // 会話ページ (index.html) — UI・イベント処理
 
 import {
-  KEYS, loadJSON, saveJSON,
-  loadConversation, saveConversation,
+  KEYS, loadEntries, loadConversation, saveConversation,
   loadProviderConfig, saveProviderConfig,
-  applyTheme, currentTheme, todayStr, nowISO
+  applyTheme, currentTheme, todayStr
 } from './shared.js';
 import { PERSONA_NAME } from './persona.js';
-import { initLLM, resetLLM, onStatusChange, getStatus } from './llm.js';
+import { initLLM, resetLLM, onStatusChange } from './llm.js';
 import { generateResponse, generateGreeting } from './dialogue.js';
 import { runPipeline } from './pipeline.js';
-import { loadEntries } from './shared.js';
-import { validateOrReset } from './quantum.js';
 
 // ── DOM 要素 ──
 let chatArea, inputArea, sendBtn, diaryBtn, dateInput, timeInput,
@@ -88,6 +85,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('beforeunload', e => {
     if (generating) { e.preventDefault(); e.returnValue = ''; }
   });
+
+  // 文字数カウンター
+  if (inputArea) {
+    const counter = document.getElementById('char-count');
+    if (counter) {
+      inputArea.addEventListener('input', () => {
+        counter.textContent = `${inputArea.value.length} / 4000`;
+        if (inputArea.value.length > 4000) counter.classList.add('over');
+        else counter.classList.remove('over');
+      });
+    }
+  }
 
   // LLM ステータス監視
   onStatusChange((s, msg) => {
@@ -394,17 +403,3 @@ function showTutorial() {
   document.body.appendChild(overlay);
 }
 
-// 文字数カウンター
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    const counter = document.getElementById('char-count');
-    const area = document.getElementById('input-area');
-    if (counter && area) {
-      area.addEventListener('input', () => {
-        counter.textContent = `${area.value.length} / 4000`;
-        if (area.value.length > 4000) counter.classList.add('over');
-        else counter.classList.remove('over');
-      });
-    }
-  });
-}

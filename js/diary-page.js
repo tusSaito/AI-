@@ -3,11 +3,10 @@
 import {
   KEYS, loadJSON, loadEntries, saveEntries,
   renderEmotionBars, renderClassicalBars,
-  applyTheme, currentTheme, formatDate
+  applyTheme, currentTheme
 } from './shared.js';
 import { PERSONA_NAME } from './persona.js';
 import { saveEntry } from './pipeline.js';
-import { AXES } from './quantum.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(currentTheme());

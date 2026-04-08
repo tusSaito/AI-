@@ -4,7 +4,6 @@ import { loadProviderConfig } from './shared.js';
 import { callProvider } from './providers.js';
 
 let pipeline = null;
-let processor = null;
 let loadingPromise = null;
 let _status = 'idle';       // idle | loading | ready | error
 let _statusMsg = '';
@@ -16,7 +15,6 @@ function setStatus(s, msg = '') {
   _status = s; _statusMsg = msg;
   for (const fn of listeners) fn(s, msg);
 }
-export function getStatus() { return { status: _status, message: _statusMsg }; }
 
 // ── ローカルモデル初期化 ──
 const MODEL_PRIMARY = 'onnx-community/gemma-3-4b-it-ONNX';
