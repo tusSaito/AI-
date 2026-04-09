@@ -13,7 +13,6 @@ import { runPipeline } from './pipeline.js';
 let generating = false;
 let greeted = false;
 let dateEdited = false;
-let llmReady = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initThemeToggle();
@@ -48,10 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(() => { if (!dateEdited) setNow(); }, 30000);
   dateInput.addEventListener('input', () => { dateEdited = true; });
 
-  // 文字数 + 送信ボタン有効化
+  // 文字数 + 送信ボタン有効化（テキストがあれば常に有効）
   function updateSendBtn() {
     const hasText = textArea.value.trim().length > 0;
-    const canSend = hasText && llmReady && !generating;
+    const canSend = hasText && !generating;
     sendBtn.disabled = !canSend;
     sendBtn.classList.toggle('bg-blue-600', canSend);
     sendBtn.classList.toggle('hover:bg-blue-500', canSend);
@@ -88,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 送信
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (generating || !llmReady) return;
+    if (generating) return;
     const text = textArea.value.trim();
     if (!text || text.length > 4000) return;
 
@@ -177,8 +176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // LLM ステータス
   onStatusChange((s, msg) => {
     if (statusText) statusText.textContent = msg;
-    llmReady = (s === 'ready');
-    updateSendBtn();
     if (s === 'ready') autoGreet(chatArea);
   });
 
@@ -188,8 +185,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initLLM();
   } catch (e) {
     if (statusText) statusText.textContent = 'エラー: ' + e.message;
-    llmReady = false;
-    updateSendBtn();
     console.error('LLM init error:', e);
   }
 });
