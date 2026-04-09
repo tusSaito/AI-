@@ -13,6 +13,7 @@ import { runPipeline } from './pipeline.js';
 let generating = false;
 let greeted = false;
 let dateEdited = false;
+let llmReady = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initThemeToggle();
@@ -47,16 +48,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(() => { if (!dateEdited) setNow(); }, 30000);
   dateInput.addEventListener('input', () => { dateEdited = true; });
 
-  // 文字数
+  // 文字数 + 送信ボタン有効化
+  function updateSendBtn() {
+    const hasText = textArea.value.trim().length > 0;
+    const canSend = hasText && llmReady && !generating;
+    sendBtn.disabled = !canSend;
+    sendBtn.classList.toggle('bg-blue-600', canSend);
+    sendBtn.classList.toggle('hover:bg-blue-500', canSend);
+    sendBtn.classList.toggle('bg-gray-300', !canSend);
+  }
   textArea.addEventListener('input', () => {
     charCount.textContent = textArea.value.length;
-    sendBtn.disabled = !textArea.value.trim();
-    sendBtn.classList.toggle('bg-blue-600', !!textArea.value.trim());
-    sendBtn.classList.toggle('bg-gray-300', !textArea.value.trim());
+    updateSendBtn();
+  });
+
+  // Ctrl+Enter / Cmd+Enter で送信
+  textArea.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (!sendBtn.disabled) form.requestSubmit();
+    }
   });
 
   // プロバイダUI
-  initProviderUI(providerSelect, apiKeyInput, modelSelect, baseUrlGroup, baseUrlInput);
+  initProviderUI(providerSelect, apiKeyInput, modelSelect, baseUrlGroup, baseUrlInput, () => updateSendBtn());
 
   // 会話復元
   const saved = loadConversation();
@@ -73,15 +88,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 送信
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (generating) return;
+    if (generating || !llmReady) return;
     const text = textArea.value.trim();
     if (!text || text.length > 4000) return;
 
     textArea.value = '';
     charCount.textContent = '0';
-    sendBtn.disabled = true;
-    sendBtn.classList.remove('bg-blue-600');
-    sendBtn.classList.add('bg-gray-300');
+    updateSendBtn();
 
     const msgs = loadConversation();
     msgs.push({ role: 'user', content: text });
@@ -92,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetBtn.hidden = false;
 
     generating = true;
-    setBusy(true);
+    updateSendBtn();
     const thinkingEl = appendSystem(chatArea, `${PERSONA_NAME}が考えています…`);
 
     try {
@@ -105,20 +118,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       thinkingEl.remove();
       appendSystem(chatArea, 'エラー: ' + err.message);
+      console.error('Generate error:', err);
     } finally {
       generating = false;
-      setBusy(false);
+      updateSendBtn();
     }
   });
 
   // 日記生成
   finalizeBtn.addEventListener('click', async () => {
-    if (generating) return;
+    if (generating || !llmReady) return;
     const msgs = loadConversation();
     if (msgs.length === 0) return;
 
     generating = true;
-    setBusy(true);
+    updateSendBtn();
     finalizeBtn.disabled = true;
     const thinkingEl = appendSystem(chatArea, '日記を生成しています…');
 
@@ -132,15 +146,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       await runPipeline(dateStr, userName, msgs, prevState);
       thinkingEl.remove();
-      appendSystem(chatArea, '日記が生成されました！日記ページで確認・保存できます。');
+      appendSystem(chatArea, '日記が生成されました！日記ページへ移動します…');
       setTimeout(() => { window.location.href = 'diary.html'; }, 1200);
     } catch (err) {
       thinkingEl.remove();
       appendSystem(chatArea, '日記生成エラー: ' + err.message);
+      console.error('Pipeline error:', err);
       finalizeBtn.disabled = false;
     } finally {
       generating = false;
-      setBusy(false);
+      updateSendBtn();
     }
   });
 
@@ -162,35 +177,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // LLM ステータス
   onStatusChange((s, msg) => {
     if (statusText) statusText.textContent = msg;
+    llmReady = (s === 'ready');
+    updateSendBtn();
     if (s === 'ready') autoGreet(chatArea);
   });
 
+  // LLM 初期化
   if (statusText) statusText.textContent = '初期化中…';
-  try { await initLLM(); } catch (e) {
+  try {
+    await initLLM();
+  } catch (e) {
     if (statusText) statusText.textContent = 'エラー: ' + e.message;
-  }
-
-  // ──────────────────────────────────────
-  function setBusy(busy) {
-    sendBtn.disabled = busy;
-    textArea.disabled = busy;
-  }
-
-  async function autoGreet(container) {
-    if (greeted) return;
-    const msgs = loadConversation();
-    if (msgs.length > 0) { greeted = true; return; }
-    const cfg = loadProviderConfig();
-    if (cfg.provider !== 'local' && !cfg[cfg.provider]?.apiKey) return;
-    greeted = true;
-    try {
-      const userName = localStorage.getItem(KEYS.USER_NAME) || '';
-      const greeting = await generateGreeting(userName);
-      appendBubble(container, 'assistant', greeting);
-      const conv = loadConversation();
-      conv.push({ role: 'assistant', content: greeting });
-      saveConversation(conv);
-    } catch { /* ignore */ }
+    llmReady = false;
+    updateSendBtn();
+    console.error('LLM init error:', e);
   }
 });
 
@@ -207,7 +207,7 @@ function appendBubble(container, role, text) {
   } else {
     div.innerHTML = `
       <div class="flex gap-3 items-start">
-        <img src="img/dyle.png" alt="${PERSONA_NAME}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-200 shrink-0 mt-1" onerror="this.src='img/dyle.svg'">
+        <img src="img/dyle.png" alt="" class="w-9 h-9 rounded-full object-cover border-2 border-slate-200 shrink-0 mt-1" onerror="this.src='img/dyle.svg'">
         <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3 max-w-[80%] text-sm leading-relaxed shadow-sm relative bubble-arrow"></div>
       </div>`;
     div.querySelector('.bubble-arrow').textContent = text;
@@ -234,17 +234,16 @@ function showTutorial() {
   const dots = document.getElementById('tutorial-dots');
   let current = 0;
 
-  dots.innerHTML = steps.length > 0
-    ? Array.from(steps).map((_, i) => `<span class="w-2 h-2 rounded-full ${i === 0 ? 'bg-slate-800' : 'bg-gray-300'}" data-dot="${i}"></span>`).join('')
-    : '';
+  dots.innerHTML = Array.from(steps).map((_, i) =>
+    `<span class="w-2 h-2 rounded-full ${i === 0 ? 'bg-slate-800' : 'bg-gray-300'}"></span>`
+  ).join('');
 
   function show(idx) {
     steps.forEach((s, i) => { s.hidden = i !== idx; s.classList.toggle('hidden', i !== idx); });
     dots.querySelectorAll('span').forEach((d, i) => {
       d.className = `w-2 h-2 rounded-full ${i === idx ? 'bg-slate-800' : 'bg-gray-300'}`;
     });
-    const nextBtn = document.getElementById('tutorial-next');
-    nextBtn.textContent = idx >= steps.length - 1 ? '始める' : '次へ';
+    document.getElementById('tutorial-next').textContent = idx >= steps.length - 1 ? '始める' : '次へ';
   }
 
   document.getElementById('tutorial-next').onclick = () => {
@@ -267,7 +266,7 @@ const MODEL_OPTIONS = {
   claude: ['claude-sonnet-4-6-20250514', 'claude-haiku-4-5-20251001', 'claude-opus-4-6-20250514']
 };
 
-function initProviderUI(sel, keyEl, modelEl, urlGroup, urlEl) {
+function initProviderUI(sel, keyEl, modelEl, urlGroup, urlEl, onUpdate) {
   const cfg = loadProviderConfig();
   sel.value = cfg.provider;
   update(cfg);
@@ -279,6 +278,7 @@ function initProviderUI(sel, keyEl, modelEl, urlGroup, urlEl) {
     update(c);
     resetLLM();
     initLLM();
+    onUpdate();
   });
 
   function update(c) {
@@ -301,7 +301,12 @@ function initProviderUI(sel, keyEl, modelEl, urlGroup, urlEl) {
     }
 
     modelEl.onchange = () => { const x = loadProviderConfig(); x[p].model = modelEl.value; saveProviderConfig(x); };
-    keyEl.oninput = () => { const x = loadProviderConfig(); x[p].apiKey = keyEl.value; saveProviderConfig(x); };
+    keyEl.oninput = () => {
+      const x = loadProviderConfig();
+      x[p].apiKey = keyEl.value;
+      saveProviderConfig(x);
+      onUpdate();
+    };
     if (urlEl) urlEl.oninput = () => { const x = loadProviderConfig(); x.openai.baseUrl = urlEl.value; saveProviderConfig(x); };
   }
 }

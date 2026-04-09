@@ -1,22 +1,20 @@
-// LLM 統一インターフェース — ローカル (Transformers.js WebGPU) / API を透過切替
+// LLM 統一インターフェース
 
 import { loadProviderConfig } from './shared.js';
 import { callProvider } from './providers.js';
 
 let pipeline = null;
 let loadingPromise = null;
-let _status = 'idle';       // idle | loading | ready | error
+let _status = 'idle';
 let _statusMsg = '';
 const listeners = new Set();
 
-// ── ステータス通知 ──
 export function onStatusChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function setStatus(s, msg = '') {
   _status = s; _statusMsg = msg;
   for (const fn of listeners) fn(s, msg);
 }
 
-// ── ローカルモデル初期化 ──
 const MODEL_PRIMARY = 'onnx-community/gemma-3-4b-it-ONNX';
 const MODEL_FALLBACK = 'onnx-community/gemma-3-2b-it-ONNX';
 
@@ -25,55 +23,48 @@ async function loadLocalModel() {
   if (loadingPromise) return loadingPromise;
 
   loadingPromise = (async () => {
-    setStatus('loading', 'モデルを読み込んでいます…');
-    const { pipeline: createPipeline } = await import(
-      'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3'
-    );
-
+    setStatus('loading', 'モデルを読み込んでいます（数GB、初回は数分かかります）…');
     try {
-      pipeline = await createPipeline('text-generation', MODEL_PRIMARY, {
-        device: 'webgpu',
-        dtype: 'q4f16'
-      });
-      setStatus('ready', '準備完了');
-    } catch (e1) {
-      console.warn('Primary model failed, trying fallback:', e1);
+      const { pipeline: createPipeline } = await import(
+        'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3'
+      );
       try {
+        pipeline = await createPipeline('text-generation', MODEL_PRIMARY, {
+          device: 'webgpu', dtype: 'q4f16'
+        });
+        setStatus('ready', '準備完了');
+      } catch (e1) {
+        console.warn('Primary model failed, trying fallback:', e1);
         pipeline = await createPipeline('text-generation', MODEL_FALLBACK, {
-          device: 'webgpu',
-          dtype: 'q4f16'
+          device: 'webgpu', dtype: 'q4f16'
         });
         setStatus('ready', '準備完了（軽量モデル）');
-      } catch (e2) {
-        setStatus('error', 'モデルの読み込みに失敗しました');
-        throw e2;
       }
+    } catch (e) {
+      loadingPromise = null;
+      setStatus('error', 'ローカルモデルの読み込みに失敗。API モードに切り替えてください。');
+      throw e;
     }
   })();
   return loadingPromise;
 }
 
 async function generateLocal({ system, user, maxNewTokens = 512, temperature = 0.7 }) {
-  await loadLocalModel();
+  if (!pipeline) throw new Error('ローカルモデルが読み込まれていません。API モードに切り替えてください。');
   const messages = [
     { role: 'system', content: system },
     { role: 'user',   content: user }
   ];
   const out = await pipeline(messages, {
     max_new_tokens: maxNewTokens,
-    temperature,
-    top_p: 0.95,
-    do_sample: true
+    temperature, top_p: 0.95, do_sample: true
   });
   const generated = out[0].generated_text;
   if (Array.isArray(generated)) {
     const last = generated[generated.length - 1];
     return (last.content || '').trim();
   }
-  const fullText = typeof generated === 'string' ? generated : '';
-  const marker = user.slice(-40);
-  const idx = fullText.lastIndexOf(marker);
-  return idx >= 0 ? fullText.slice(idx + marker.length).trim() : fullText.trim();
+  return typeof generated === 'string' ? generated.trim() : '';
 }
 
 // ── 統一 generate ──
@@ -82,19 +73,29 @@ export async function generate({ system, user, maxNewTokens = 512, temperature =
   if (cfg.provider === 'local') {
     return generateLocal({ system, user, maxNewTokens, temperature });
   }
+  // API モード: キーの存在を再確認
+  const provCfg = cfg[cfg.provider];
+  if (!provCfg?.apiKey) {
+    throw new Error(`${cfg.provider.toUpperCase()} の API キーが設定されていません。サイドバーで入力してください。`);
+  }
   return callProvider(cfg.provider, { system, user, maxNewTokens, temperature });
 }
 
-// ── 初期化（UI から呼ぶ）──
+// ── 初期化 ──
 export async function initLLM() {
   const cfg = loadProviderConfig();
   if (cfg.provider === 'local') {
     return loadLocalModel();
   }
-  setStatus('ready', `${cfg.provider.toUpperCase()} API で接続`);
+  // API モード: キーがあれば即 ready
+  const provCfg = cfg[cfg.provider];
+  if (provCfg?.apiKey) {
+    setStatus('ready', `${cfg.provider.toUpperCase()} API 接続準備完了`);
+  } else {
+    setStatus('ready', `${cfg.provider.toUpperCase()} API — キーを入力してください`);
+  }
 }
 
-// ── 状態リセット（プロバイダ切替時）──
 export function resetLLM() {
   pipeline = null;
   loadingPromise = null;
