@@ -21,10 +21,25 @@
     var clearBtn = document.getElementById("clear-btn");
 
     function loadEntries() {
-        try { var r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : {}; }
+        try {
+            var r = localStorage.getItem(STORAGE_KEY);
+            var parsed = r ? JSON.parse(r) : {};
+            // 旧形式(単一オブジェクト)を配列形式に自動マイグレーション
+            Object.keys(parsed).forEach(function (k) {
+                if (parsed[k] && !Array.isArray(parsed[k])) {
+                    parsed[k] = [parsed[k]];
+                }
+            });
+            return parsed;
+        }
         catch (e) { return {}; }
     }
     function saveEntries(o) { localStorage.setItem(STORAGE_KEY, JSON.stringify(o)); }
+
+    function getLatestEntry(dayEntries) {
+        if (!dayEntries || dayEntries.length === 0) return null;
+        return dayEntries[dayEntries.length - 1];
+    }
 
     function loadSummaries() {
         try { var r = localStorage.getItem(SUMMARIES_KEY); return r ? JSON.parse(r) : {}; }
@@ -45,7 +60,8 @@
         var dates = Object.keys(all).filter(function (d) { return d < dateStr; }).sort().reverse();
         var result = [];
         for (var i = 0; i < Math.min(dates.length, max || 3); i++) {
-            result.push(all[dates[i]]);
+            var latest = getLatestEntry(all[dates[i]]);
+            if (latest) result.push(latest);
         }
         return result.reverse();
     }
@@ -120,14 +136,15 @@
             renderEmotion(data);
 
             var all = loadEntries();
-            all[entryDate] = {
+            if (!Array.isArray(all[entryDate])) all[entryDate] = [];
+            all[entryDate].push({
                 date: entryDate,
                 user_diary: diary,
                 ai_diary: data.ai_diary,
                 emotion: data.emotion_after,
                 state_vec: data.state_vec,
                 created_at: new Date().toISOString(),
-            };
+            });
             saveEntries(all);
             renderHistory();
 
@@ -184,7 +201,7 @@
 
         if (weekEntries.length < 7) return;
 
-        var entries = weekEntries.map(function (d) { return all[d]; });
+        var entries = weekEntries.map(function (d) { return getLatestEntry(all[d]); }).filter(Boolean);
         try {
             var res = await fetch("/api/compress", {
                 method: "POST",
@@ -211,27 +228,31 @@
             return;
         }
         dates.forEach(function (d) {
-            var entry = all[d];
-            var li = document.createElement("li");
-            li.className = "history-item";
-            var dateSpan = document.createElement("span");
-            dateSpan.className = "history-date";
-            dateSpan.textContent = d;
+            var dayEntries = all[d] || [];
+            dayEntries.forEach(function (entry, idx) {
+                var li = document.createElement("li");
+                li.className = "history-item";
+                var dateSpan = document.createElement("span");
+                dateSpan.className = "history-date";
+                dateSpan.textContent = dayEntries.length > 1
+                    ? d + " (" + (idx + 1) + "/" + dayEntries.length + ")"
+                    : d;
 
-            var details = document.createElement("details");
-            var summary = document.createElement("summary");
-            summary.appendChild(dateSpan);
-            details.appendChild(summary);
+                var details = document.createElement("details");
+                var summary = document.createElement("summary");
+                summary.appendChild(dateSpan);
+                details.appendChild(summary);
 
-            var userP = document.createElement("p");
-            userP.textContent = entry.user_diary;
-            var aiP = document.createElement("p");
-            aiP.textContent = entry.ai_diary;
-            details.appendChild(userP);
-            details.appendChild(aiP);
+                var userP = document.createElement("p");
+                userP.textContent = entry.user_diary;
+                var aiP = document.createElement("p");
+                aiP.textContent = entry.ai_diary;
+                details.appendChild(userP);
+                details.appendChild(aiP);
 
-            li.appendChild(details);
-            historyList.appendChild(li);
+                li.appendChild(details);
+                historyList.appendChild(li);
+            });
         });
     }
 
@@ -263,7 +284,16 @@
                 var cur = loadEntries();
                 var count = 0;
                 Object.keys(entries).forEach(function (k) {
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(k)) { cur[k] = entries[k]; count++; }
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+                    var incoming = Array.isArray(entries[k]) ? entries[k] : [entries[k]];
+                    if (!Array.isArray(cur[k])) cur[k] = [];
+                    incoming.forEach(function (e) {
+                        if (!e || typeof e !== "object") return;
+                        var dup = cur[k].some(function (ex) {
+                            return ex.created_at && ex.created_at === e.created_at;
+                        });
+                        if (!dup) { cur[k].push(e); count++; }
+                    });
                 });
                 saveEntries(cur);
 
