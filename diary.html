@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Penguin Dyle — 日記</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="dark.css" rel="stylesheet">
+    <style>
+        body { overscroll-behavior-y: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.5); border-radius: 3px; }
+        .bubble-arrow::before {
+            content: ""; position: absolute; top: 14px; left: -8px;
+            border-width: 6px 8px 6px 0; border-style: solid;
+            border-color: transparent white transparent transparent;
+        }
+        .bar-row { display: flex; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .bar-label { width: 80px; font-weight: 700; color: #64748b; }
+        .bar-track { flex: 1; height: 12px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
+        .bar-value { min-width: 90px; text-align: right; color: #94a3b8; font-size: 0.85rem; padding-right: 0.3rem; }
+        .bar-delta { width: 60px; text-align: right; font-size: 0.75rem; color: #94a3b8; }
+        .bar-delta.up { color: #2a9d5f; }
+        .bar-delta.down { color: #dc2626; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen w-screen overflow-hidden flex flex-col md:flex-row font-sans text-slate-800">
+
+    <aside class="w-full md:w-80 lg:w-96 bg-slate-900 text-white flex flex-col h-auto md:h-full shrink-0 shadow-xl z-20 overflow-y-auto">
+        <div class="p-6 flex flex-col items-center justify-center border-b border-slate-700">
+            <div class="w-24 h-24 rounded-full bg-slate-800 mb-4 border-2 border-slate-600 overflow-hidden flex items-center justify-center shadow-inner">
+                <img src="img/dyle.png" alt="ダイル" class="w-full h-full object-cover" onerror="this.src='img/dyle.svg'">
+            </div>
+            <h1 class="text-xl font-bold tracking-wide">ペンギン大流 <span class="text-sm text-slate-400 font-normal">（ダイル）</span></h1>
+            <p class="text-xs text-slate-400 mt-3 text-center leading-relaxed">
+                元・量子物理の研究者。<br>あなたの本音を、問いかけで引き出す。
+            </p>
+        </div>
+
+        <div class="p-6 flex-1 flex flex-col gap-4">
+            <button type="button" id="save-btn" hidden
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-900/20 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> ブラウザに保存
+            </button>
+
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                <p class="text-xs text-slate-400 font-semibold tracking-wider mb-1">ENTRIES</p>
+                <p id="entry-count" class="text-lg font-bold text-white">0</p>
+                <p id="storage-usage" class="text-[10px] text-slate-500 mt-1"></p>
+            </div>
+
+            <div class="mt-auto pt-4">
+                <a href="index.html" class="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl text-sm transition border border-slate-700">
+                    <i class="fa-solid fa-plus mr-1"></i> 新しい会話を始める
+                </a>
+            </div>
+        </div>
+
+        <nav class="flex justify-around border-t border-slate-800 bg-slate-900/50 p-2">
+            <a href="index.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-message text-lg mb-1"></i><span class="text-[10px]">会話</span>
+            </a>
+            <a href="diary.html" class="flex flex-col items-center p-2 text-blue-400 transition">
+                <i class="fa-solid fa-book text-lg mb-1"></i><span class="text-[10px]">日記</span>
+            </a>
+            <a href="archive.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-chart-bar text-lg mb-1"></i><span class="text-[10px]">記録</span>
+            </a>
+            <button id="theme-toggle" class="flex flex-col items-center p-2 text-slate-400 hover:text-white transition" title="テーマ切替">
+                <i class="fa-solid fa-moon text-lg mb-1"></i><span class="text-[10px]">テーマ</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col bg-slate-50 h-full relative w-full min-h-0">
+        <header class="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
+            <img src="img/dyle.png" alt="ダイル" class="w-8 h-8 rounded-full object-cover mr-3 border-2 border-slate-200 md:hidden" onerror="this.src='img/dyle.svg'">
+            <h2 class="font-bold text-gray-800 text-lg">ダイルの日記</h2>
+        </header>
+
+        <div id="diary-list" class="flex-1 overflow-y-auto p-4 md:p-6">
+            <p class="text-xs text-gray-400 mb-6 bg-gray-100 border border-gray-200 rounded-lg p-3 leading-relaxed">
+                <i class="fa-solid fa-circle-info mr-1 text-blue-400"></i>
+                ダイルが会話を振り返り、自分自身への気づきとして書き留めた日記です。
+            </p>
+            <div id="entries-container"></div>
+        </div>
+
+        <div id="empty-state" class="flex-1 items-center justify-center p-6 hidden">
+            <div class="text-center">
+                <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-book-open text-3xl text-gray-400"></i>
+                </div>
+                <p class="text-gray-500 mb-2">まだ日記がありません。</p>
+                <a href="index.html" class="text-blue-500 hover:text-blue-700 text-sm font-semibold transition">
+                    <i class="fa-solid fa-message mr-1"></i> ダイルと会話する
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="js/diary-page.js"></script>
+</body>
+</html>

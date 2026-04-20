@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Penguin Dyle — 会話</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="dark.css" rel="stylesheet">
+    <style>
+        body { overscroll-behavior-y: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.5); border-radius: 3px; }
+        .chat-enter { animation: slideIn 0.3s ease-out forwards; opacity: 0; transform: translateY(10px); }
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+        .tutorial-overlay { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen w-screen overflow-hidden flex flex-col md:flex-row font-sans text-slate-800">
+
+    <!-- チュートリアル -->
+    <div id="tutorial-overlay" class="tutorial-overlay fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
+            <div class="tutorial-steps">
+                <div class="tutorial-step" data-step="0">
+                    <div class="flex justify-center mb-4">
+                        <img src="img/dyle.png" alt="ダイル" class="w-20 h-20 rounded-full object-cover border-4 border-slate-200"
+                             onerror="this.src='img/dyle.svg'">
+                    </div>
+                    <h2 class="text-xl font-bold text-center mb-2">ようこそ、Penguin Dyle へ</h2>
+                    <p class="text-sm text-gray-600 mb-2">私はペンギン大流（ダイル）。元・量子物理の研究者で、今は東京の小さな喫茶店を営んでいる。</p>
+                    <p class="text-sm text-gray-600">ここでは、あなたの話を聞き、問いかけを通じてあなた自身の本音を引き出す。最後に、私なりの気づきを日記として書き留める。</p>
+                </div>
+                <div class="tutorial-step hidden" data-step="1">
+                    <h2 class="text-xl font-bold mb-2">Step 1: 名前と日時</h2>
+                    <p class="text-sm text-gray-600">まず、あなたの名前を教えてほしい。私はその名前で呼びかける。日時は自動で入っている。</p>
+                </div>
+                <div class="tutorial-step hidden" data-step="2">
+                    <h2 class="text-xl font-bold mb-2">Step 2: 今日あったことを書く</h2>
+                    <p class="text-sm text-gray-600">テキストエリアに今日の出来事や感じたことを書き、送信ボタンを押す。私が問いかけを返すので、それに答えてほしい。何度でも話せる。</p>
+                </div>
+                <div class="tutorial-step hidden" data-step="3">
+                    <h2 class="text-xl font-bold mb-2">Step 3: 日記を生成</h2>
+                    <p class="text-sm text-gray-600">十分に話したら「日記を書いてもらう」を押す。会話全体を元に、私が日記を書き上げる。感情パラメータも算出される。</p>
+                    <p class="text-sm text-gray-600 mt-1">「記録」タブでは、過去の日記をカレンダーやグラフで振り返ることもできる。</p>
+                </div>
+            </div>
+            <div class="tutorial-actions flex justify-between mt-6 pt-4 border-t border-gray-100">
+                <button id="tutorial-skip" class="text-gray-400 hover:text-gray-600 text-sm">スキップ</button>
+                <button id="tutorial-next" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm transition">次へ</button>
+            </div>
+            <div class="tutorial-dots flex justify-center mt-4 gap-1" id="tutorial-dots"></div>
+        </div>
+    </div>
+
+    <!-- 左カラム: プロフィール & 設定 -->
+    <aside class="w-full md:w-72 lg:w-80 bg-slate-900 text-white flex flex-col h-auto md:h-full shrink-0 shadow-xl z-20">
+        <div class="p-4 flex items-center gap-3 border-b border-slate-700">
+            <div class="w-12 h-12 rounded-full bg-slate-800 border-2 border-slate-600 overflow-hidden shrink-0">
+                <img src="img/dyle.png" alt="ダイル" class="w-full h-full object-cover" onerror="this.src='img/dyle.svg'">
+            </div>
+            <div>
+                <h1 class="text-sm font-bold">ペンギン大流 <span class="text-xs text-slate-400 font-normal">（ダイル）</span></h1>
+                <p class="text-[10px] text-slate-500 leading-relaxed">元・量子物理の研究者</p>
+            </div>
+        </div>
+
+        <div class="p-3 flex-1 flex flex-col gap-2 overflow-y-auto">
+            <div class="bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                <label for="user-name" class="text-[10px] text-slate-400 block mb-0.5 font-semibold tracking-wider">NAME</label>
+                <input type="text" id="user-name" maxlength="30" placeholder="あなたの名前"
+                       class="w-full bg-transparent text-white placeholder-slate-500 border-none text-xs outline-none">
+            </div>
+            <div class="bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                <label for="entry-date" class="text-[10px] text-slate-400 block mb-0.5 font-semibold tracking-wider">DATE</label>
+                <input type="datetime-local" id="entry-date" name="date" required
+                       class="w-full bg-transparent text-white border-none text-xs outline-none" style="color-scheme: dark;">
+            </div>
+
+            <div class="bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                <label class="text-[10px] text-slate-400 block mb-0.5 font-semibold tracking-wider">PROVIDER</label>
+                <select id="provider-select" class="w-full bg-slate-700 text-white border-none px-1.5 py-1 text-xs rounded outline-none">
+                    <option value="local">ローカル (Gemma WebGPU)</option>
+                    <option value="gemini">Gemini API</option>
+                    <option value="openai">OpenAI API</option>
+                    <option value="claude">Claude API</option>
+                </select>
+                <div id="api-key-group" hidden class="mt-1.5">
+                    <label class="text-[10px] text-slate-400 block mb-0.5">API KEY</label>
+                    <input type="password" id="api-key" placeholder="sk-..."
+                           class="w-full bg-slate-700 text-white placeholder-slate-500 px-1.5 py-1 text-xs rounded outline-none">
+                    <p class="text-[9px] text-slate-500 mt-0.5">キーはブラウザ内にのみ保存</p>
+                </div>
+                <div id="model-group" hidden class="mt-1.5">
+                    <label class="text-[10px] text-slate-400 block mb-0.5">MODEL</label>
+                    <select id="model-select" class="w-full bg-slate-700 text-white border-none px-1.5 py-1 text-xs rounded outline-none"></select>
+                </div>
+                <div id="base-url-group" hidden class="mt-1.5">
+                    <label class="text-[10px] text-slate-400 block mb-0.5">BASE URL</label>
+                    <input type="text" id="base-url" placeholder="https://api.openai.com/v1"
+                           class="w-full bg-slate-700 text-white placeholder-slate-500 px-1.5 py-1 text-xs rounded outline-none">
+                </div>
+            </div>
+
+            <div id="model-status" class="bg-slate-800/50 rounded-lg p-2 border border-slate-700">
+                <p id="model-status-text" class="text-[10px] text-slate-400 text-center">モデルを準備中...</p>
+            </div>
+
+            <div class="mt-auto pt-2 flex flex-col gap-1.5">
+                <button type="button" id="finalize-btn" hidden
+                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-3 rounded-lg shadow transition flex items-center justify-center gap-2 text-xs disabled:opacity-50">
+                    <i class="fa-solid fa-book-open"></i> 日記を書いてもらう
+                </button>
+                <div class="flex gap-1.5">
+                    <button type="button" id="show-tutorial" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-[10px] transition border border-slate-700">
+                        <i class="fa-solid fa-circle-question mr-0.5"></i> 使い方
+                    </button>
+                    <button type="button" id="reset-btn" hidden class="flex-1 bg-slate-800 hover:bg-slate-700 text-red-400 py-1.5 rounded-lg text-[10px] transition border border-slate-700">
+                        <i class="fa-solid fa-trash-can mr-0.5"></i> リセット
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ナビゲーション -->
+        <nav class="flex justify-around border-t border-slate-800 bg-slate-900/50 p-1 shrink-0">
+            <a href="index.html" class="flex flex-col items-center p-1.5 text-blue-400 transition">
+                <i class="fa-solid fa-message text-sm"></i><span class="text-[9px]">会話</span>
+            </a>
+            <a href="diary.html" class="flex flex-col items-center p-1.5 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-book text-sm"></i><span class="text-[9px]">日記</span>
+            </a>
+            <a href="archive.html" class="flex flex-col items-center p-1.5 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-chart-bar text-sm"></i><span class="text-[9px]">記録</span>
+            </a>
+            <button id="theme-toggle" class="flex flex-col items-center p-1.5 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-moon text-sm"></i><span class="text-[9px]">テーマ</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- 右カラム: チャット -->
+    <main class="flex-1 flex flex-col bg-slate-50 h-full relative w-full min-h-0">
+        <header class="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
+            <img src="img/dyle.png" alt="ダイル" class="w-8 h-8 rounded-full object-cover mr-3 border-2 border-slate-200 md:hidden" onerror="this.src='img/dyle.svg'">
+            <h2 class="font-bold text-gray-800 text-lg">大流との対話ルーム</h2>
+        </header>
+
+        <div id="conversation" class="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-5 scroll-smooth"></div>
+
+        <footer class="p-3 md:p-4 bg-white border-t border-gray-200 shrink-0">
+            <form id="dialogue-form" autocomplete="off" class="max-w-4xl mx-auto flex items-end gap-2">
+                <div class="flex-1 bg-gray-100 rounded-3xl border border-gray-200 focus-within:border-blue-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all flex items-center">
+                    <textarea id="entry-text" name="diary" rows="1" maxlength="4000"
+                              class="w-full bg-transparent border-none px-4 py-3 text-sm md:text-base outline-none resize-none max-h-32 min-h-[48px]"
+                              placeholder="メッセージを入力..." required></textarea>
+                </div>
+                <button type="submit" id="send-btn" disabled title="ダイルに話しかけます"
+                        class="w-12 h-12 rounded-full bg-gray-300 text-white flex items-center justify-center transition shrink-0 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-paper-plane text-lg"></i>
+                </button>
+            </form>
+            <div class="max-w-4xl mx-auto text-right mt-1 px-2 text-[10px] md:text-xs text-gray-400">
+                <span id="char-count">0</span> / 4000
+            </div>
+        </footer>
+    </main>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
